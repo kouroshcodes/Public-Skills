@@ -12,6 +12,14 @@ Composes `grilling`, `domain-modeling` and `html-it`, and adds the rule none of 
 
 Requires the [`mattpocock-skills`](https://github.com/mattpocock/skills) plugin and the [`html-it`](https://github.com/robonuggets/html-it) skill.
 
+### [`html-worklist`](./html-worklist)
+
+Turns a GitHub issue, a doc, a plan, or the tasks in the current conversation into one self-contained HTML worklist on your Desktop.
+
+The file is the **ledger**. It carries the tasks, the acceptance criteria, the collision map of which tasks can't run at the same time, and a paste-ready prompt. Drop that prompt into a fresh session and it becomes the **runner** — fanning out parallel agents across the tasks and writing every state change back into the same file, so one page always shows where the work stands.
+
+No dependencies.
+
 ---
 
 ## Installing a skill

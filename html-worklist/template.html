@@ -1,0 +1,185 @@
+<!doctype html>
+<!--
+  BUILDER NOTES - delete this comment block from the file you write.
+
+  Fill every {{PLACEHOLDER}}. Repeat the <article class="task"> block once per task.
+  Keep the data-* attributes exactly as written: the runner edits ONLY data-state,
+  and it finds a task by matching the literal string  data-id="T3" data-state="todo".
+  So data-id must be unique and data-state must sit immediately after data-id.
+  When a task has no issue, drop both data-issue AND the issue <a> from .meta.
+  data-blocked-by lists EVERY blocking task id, space-separated: data-blocked-by="T1 T4".
+  When nothing blocks it, drop both data-blocked-by AND the "blocked by" <span>.
+  A bare "issue #" or "blocked by" in the rendered file means you left a stub behind.
+  Everything the runner needs is in this file. Do not link out to other files.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Worklist - {{BATCH_TITLE}}</title>
+<style>
+  :root {
+    --bg: #f7f7f6; --panel: #ffffff; --ink: #16181d; --muted: #6b7280;
+    --line: #e4e4e2; --accent: #2563eb; --todo: #9ca3af; --doing: #d97706;
+    --done: #059669; --blocked: #dc2626; --code-bg: #f1f1ef;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0d0e11; --panel: #14161a; --ink: #e8e9ec; --muted: #8b909a;
+      --line: #23262c; --accent: #6b9bff; --todo: #6b7280; --doing: #f0a020;
+      --done: #34d399; --blocked: #f87171; --code-bg: #1a1d22;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 40px 24px 80px; background: var(--bg); color: var(--ink);
+    font: 15px/1.6 ui-sans-serif, -apple-system, "Segoe UI", system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 900px; margin: 0 auto; }
+  h1 { font-size: 26px; letter-spacing: -0.02em; margin: 0 0 6px; }
+  .sub { color: var(--muted); font-size: 13px; margin: 0 0 28px; }
+  .sub a { color: var(--accent); }
+  code, pre, .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+
+  .bar { height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; display: flex; margin-bottom: 10px; }
+  .bar i { display: block; height: 100%; }
+  .counts { display: flex; gap: 16px; font-size: 12px; color: var(--muted); margin-bottom: 32px; }
+  .counts b { color: var(--ink); font-variant-numeric: tabular-nums; }
+
+  .prompt { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 18px 20px; margin-bottom: 36px; }
+  .prompt h2 { font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin: 0 0 12px; font-weight: 600; }
+  .prompt pre { background: var(--code-bg); border-radius: 7px; padding: 14px 16px; margin: 0; font-size: 13px; white-space: pre-wrap; word-break: break-word; overflow-x: auto; }
+  button { font: inherit; font-size: 12px; padding: 7px 14px; margin-top: 12px; border: 1px solid var(--line); border-radius: 7px; background: var(--panel); color: var(--ink); cursor: pointer; }
+  button:hover { border-color: var(--accent); color: var(--accent); }
+
+  .task { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 18px 20px; margin-bottom: 14px; }
+  .task[data-state="blocked"] { border-color: var(--blocked); }
+  .task[data-state="done"] { opacity: 0.62; }
+  .task[data-state="done"] h3 { text-decoration: line-through; }
+  .task header { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+  .dot { width: 7px; height: 7px; border-radius: 50%; align-self: center; flex: none; }
+  [data-state="todo"]    .dot { background: var(--todo); }
+  [data-state="doing"]   .dot { background: var(--doing); }
+  [data-state="done"]    .dot { background: var(--done); }
+  [data-state="blocked"] .dot { background: var(--blocked); }
+  .task h3 { font-size: 16px; margin: 0; letter-spacing: -0.01em; }
+  .id { font-size: 12px; color: var(--muted); font-family: ui-monospace, monospace; }
+  .chip { margin-left: auto; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600; }
+  [data-state="todo"]    .chip { color: var(--todo); }
+  [data-state="doing"]   .chip { color: var(--doing); }
+  [data-state="done"]    .chip { color: var(--done); }
+  [data-state="blocked"] .chip { color: var(--blocked); }
+  .task dl { display: grid; grid-template-columns: 108px 1fr; gap: 6px 16px; margin: 14px 0 0; font-size: 14px; }
+  .task dt { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; padding-top: 2px; }
+  .task dd { margin: 0; }
+  .task dd code { background: var(--code-bg); border-radius: 4px; padding: 1px 5px; font-size: 12.5px; }
+  .task .meta { margin-top: 14px; font-size: 12px; color: var(--muted); display: flex; gap: 14px; flex-wrap: wrap; }
+  .task .meta a { color: var(--accent); }
+  .task .meta .note { color: var(--blocked); }
+
+  details { margin-top: 40px; border-top: 1px solid var(--line); padding-top: 20px; }
+  summary { cursor: pointer; font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 600; }
+  details h3 { font-size: 14px; margin: 22px 0 8px; }
+  details li { margin-bottom: 6px; }
+  details code { background: var(--code-bg); border-radius: 4px; padding: 1px 5px; font-size: 12.5px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>{{BATCH_TITLE}}</h1>
+  <p class="sub">Source: {{SOURCE}} &middot; generated {{TIMESTAMP}}</p>
+
+  <div class="bar" id="bar"></div>
+  <div class="counts" id="counts"></div>
+
+  <section class="prompt">
+    <h2>Paste into a fresh session</h2>
+    <pre id="runprompt">Read {{ABSOLUTE_PATH}} and run it as the worklist runner - follow the RUN PROTOCOL inside the file.</pre>
+    <button onclick="copy('runprompt', this)">Copy prompt</button>
+  </section>
+
+  <!-- One article per task. Repeat this block. -->
+  <article class="task" data-id="{{ID}}" data-state="todo" data-issue="{{ISSUE_NUMBER}}" data-blocked-by="{{BLOCKING_IDS_SPACE_SEPARATED}}">
+    <header>
+      <span class="dot"></span>
+      <span class="id">{{ID}}</span>
+      <h3>{{TITLE}}</h3>
+      <span class="chip"></span>
+    </header>
+    <dl>
+      <dt>Context</dt><dd>{{WHY_AND_WHAT - everything an agent with zero conversation history needs}}</dd>
+      <dt>Files</dt><dd><code>{{PATH}}</code></dd>
+      <dt>Done when</dt><dd>{{CHECKABLE_ACCEPTANCE_CRITERION}}</dd>
+    </dl>
+    <div class="meta">
+      <a href="{{ISSUE_URL}}">issue #{{ISSUE_NUMBER}}</a>
+      <span>blocked by {{BLOCKING_IDS_SPACE_SEPARATED}}</span>
+      <span class="note"></span>
+    </div>
+  </article>
+
+  <details>
+    <summary>Run protocol</summary>
+
+    <p>You are the <strong>runner</strong>. This file is the <strong>ledger</strong>: it is the record of where the work stands, and you are the only writer. Sub-agents never open it.</p>
+
+    <h3>1. Read the whole file first</h3>
+    <p>Every task, every state, every <code>data-blocked-by</code> (a space-separated list of task ids). A task is available only when EVERY listed blocker is <code>done</code> - otherwise leave it alone this round.</p>
+    <p><strong>Any task already <code>doing</code> when you start was orphaned by a dead runner</strong> - no agent of yours owns it. Verify its acceptance criterion now: met, settle it <code>done</code>; not met, reset it to <code>todo</code> (its half-applied edits are now yours to inherit - diff before redispatching).</p>
+
+    <h3>2. Claim before you dispatch</h3>
+    <p>For each available task, edit this file: <code>data-state="todo"</code> becomes <code>data-state="doing"</code> on that task's article. Match on the literal string <code>data-id="T3" data-state="todo"</code> so the edit hits exactly one task. If the task has a <code>data-issue</code>, mirror the claim with <code>gh issue comment &lt;n&gt; --body "Claimed by worklist runner."</code>. Claim every task in the round <em>before</em> spawning anything, so nothing is picked up twice.</p>
+
+    <h3>3. Fan out - AT MOST 3 AGENTS, ONE BROWSER</h3>
+    <p><strong>This is an 8GB Mac and it HARD-CRASHED on 2026-08-08 doing this step wrong.</strong> Six agents were spawned in one message against one shared dev server. The dev server was never the problem - it was ~3.2GB. Each agent also spawned <em>its own</em> headless Chrome (~0.5-0.8GB) and <em>its own</em> <code>tsc</code> (~1.5GB each, three concurrent at peak). The box went to 13.9GB swap and died. Do NOT spawn one agent per task.</p>
+    <ul>
+      <li><strong>Cap the round at 3 agents, and only ONE may drive a browser.</strong> The other two must be text-only - docs, a test, a grep audit, a code edit with no visual check. The browser count is the real constraint, not the agent count; two headless Chromes in one round is what kills the box.</li>
+      <li><strong>You start ONE dev server</strong> before dispatching, and say so in every prompt: never <code>npm run dev</code>, never start a second, never kill it.</li>
+      <li><strong>Forbid per-agent <code>tsc</code>, <code>vitest</code>, <code>next build</code> and <code>npm install</code></strong> in the prompt. Run ONE gate centrally after the round with no browser open. Biggest single win - three agents each running <code>tsc</code> is ~4.5GB of pure duplication.</li>
+      <li><strong>Watch <code>memory_pressure</code> / <code>vm_stat</code>, not the agent count.</strong> Below ~1.5GB free, stop dispatching and kill something.</li>
+      <li><strong>Before killing an agent, check what it owns.</strong> One held a seeded account in the LIVE database - killing it blind would have orphaned production data. Message it to tear down first, then stop it. Killed agents also leave half-applied edits that break the central gate for everyone else.</li>
+      <li>More tasks than slots? Run several rounds. A queued task costs nothing; a crashed machine costs the whole session.</li>
+    </ul>
+    <p>Give each agent the task's context, files, and acceptance criterion copied out of this file - it cannot see this file or your conversation. Tell it to report back what it changed, whether the acceptance criterion is met, and to be explicit about what it did NOT verify.</p>
+
+    <h3>4. Verify, then settle the ledger</h3>
+    <p>An agent's word is not evidence. Check the acceptance criterion yourself - read the diff, run the check. <strong>Check the artifacts too:</strong> an agent once reported four both-theme screenshots that were all ZERO BYTES, and its "verified in both themes" claim was simply false - <code>stat</code> anything an agent cites as proof. An agent that says plainly what it did NOT verify is more useful than one that claims a clean pass; treat an unqualified "all criteria met" as a prompt to look harder, not less. Then edit this file once per task:</p>
+    <ul>
+      <li>criterion met: <code>data-state="doing"</code> becomes <code>data-state="done"</code>, and if there is a <code>data-issue</code>, <code>gh issue close &lt;n&gt; --comment "&lt;what shipped&gt;"</code></li>
+      <li>criterion not met: <code>data-state="blocked"</code>, put the reason in that task's <code>&lt;span class="note"&gt;</code>, and if there is a <code>data-issue</code>, comment the reason on it rather than closing. (<code>blocked</code> means <em>attempted and failed for the noted reason</em> - a task merely waiting on its <code>data-blocked-by</code> stays <code>todo</code>.)</li>
+    </ul>
+
+    <h3>5. Next round</h3>
+    <p>Finishing a task can unblock others. A <code>blocked</code> task whose noted reason was transient - a flaky test, an agent that ran out of context, memory pressure - gets ONE retry: reset it to <code>todo</code> and append "(retry)" to its note. A reason that names a durable obstacle (needs auth, needs a decision, needs data that doesn't exist) stays <code>blocked</code>. Go back to step 1 and repeat until every task is <code>done</code> or durably <code>blocked</code>.</p>
+
+    <h3>6. Report</h3>
+    <p>Tell the user what shipped, what is blocked and why, and the path to this file.</p>
+  </details>
+
+</div>
+<script>
+  const STATES = ['todo', 'doing', 'done', 'blocked'];
+  const tasks = [...document.querySelectorAll('.task')];
+  const n = s => tasks.filter(t => t.dataset.state === s).length;
+
+  tasks.forEach(t => t.querySelector('.chip').textContent = t.dataset.state);
+
+  document.getElementById('bar').innerHTML = STATES
+    .map(s => `<i style="width:${(n(s) / (tasks.length || 1)) * 100}%;background:var(--${s})"></i>`)
+    .join('');
+
+  document.getElementById('counts').innerHTML =
+    `<span><b>${tasks.length}</b> tasks</span>` +
+    STATES.map(s => `<span><b>${n(s)}</b> ${s}</span>`).join('');
+
+  function copy(id, btn) {
+    navigator.clipboard.writeText(document.getElementById(id).textContent);
+    const was = btn.textContent;
+    btn.textContent = 'Copied';
+    setTimeout(() => btn.textContent = was, 1400);
+  }
+</script>
+</body>
+</html>
