@@ -20,6 +20,14 @@ The file is the **ledger**. It carries the tasks, the acceptance criteria, the c
 
 No dependencies.
 
+### [`wave-chain`](./wave-chain)
+
+Runs many orchestrator sessions at once over one GitHub backlog — one wave each, unblocking each other by message.
+
+Waves decide who owns what; they are **not** barriers. The lock is per ticket, as GitHub's native `blockedBy` edges an agent can query, so a session with two blocked tickets runs its other fourteen instead of idling a whole wave. When a session closes a blocker it **messages** whoever was waiting, who re-verifies the edge before starting — no polling, no status column going stale. Questions that need you are surfaced at claim time and collected into one decision sheet rather than N interruptions.
+
+Requires the [`superpowers`](https://github.com/obra/superpowers) plugin.
+
 ---
 
 ## Installing a skill
