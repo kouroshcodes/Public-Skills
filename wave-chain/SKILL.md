@@ -30,6 +30,22 @@ If the project has a build/orchestration protocol doc (here, `docs/agents/build-
 
 **Code is the only evidence.** Never a doc, never a state tracker, never a handoff file, never memory, never what a previous session reported. `BUILD_STATE.md` says a feature shipped and the repo says otherwise: the repo is right. Every verdict carries `file:line`, or it is not a verdict.
 
+## Shared machine
+
+Every wave runs on one laptop, and the waves all run at the same time. These two are hard caps, not targets.
+
+**Five parallel agents per wave, maximum.** Count every subagent you have in flight, not the tickets you own. Three waves running means fifteen agents on one machine, which is already the ceiling. A sixth agent in a wave does not finish sooner, it slows the other five and pushes the machine into swap. More tickets than slots: queue them and dispatch as agents return.
+
+**One dev server, shared by every session.** Never start a second. Before you start anything:
+
+```bash
+lsof -ti:3000
+```
+
+A PID means the shared server is already up - use it, and it makes no difference which wave started it. Start one only when nothing answers. Never kill a server you did not start, and when you finish, leave the one you did start running: another wave is probably mid-verification on it. A second `next dev` on port 3001 is not a workaround, it is the same RAM and a second set of file watchers on the same tree.
+
+These numbers are this machine's, like `## Project conventions` below. Change them together with that section when you adapt the skill.
+
 ---
 
 # §R Read (default)
@@ -56,7 +72,7 @@ So every open ticket is read against the actual code and gets one of three verdi
 
 **Undeterminable is `OPEN`.** A ticket you cannot prove shipped is never `SHIPPED`. Re-running a done ticket costs an hour; dropping a live one leaves a hole nobody is looking for.
 
-Fan out to verify: one subagent per batch of tickets, given the ticket bodies verbatim. **Cap the fan-out at 3 concurrent subagents** and give none of them `tsc` - the dev machine has 8GB and a wider fan-out has crashed it.
+Fan out to verify: one subagent per batch of tickets, given the ticket bodies verbatim. **Cap this fan-out at 3 concurrent subagents** - stricter than the five in Shared machine, because verifiers all grep the whole tree at once - and give none of them `tsc`, which has crashed this 8GB machine before.
 
 Say it in the subagent's prompt: read the code, not the docs. One that comes back citing `BUILD_STATE.md`, a handoff file, or an archive as proof gets sent back for `file:line`.
 
@@ -160,7 +176,7 @@ Then claim **your frontier tickets only** - the ones I1 computed as runnable: `g
 
 ## I3. Run the free tickets
 
-**REQUIRED SUB-SKILL:** `superpowers:subagent-driven-development` - one subagent per ticket. Give it the ticket body verbatim; assume it has seen nothing of this conversation.
+**REQUIRED SUB-SKILL:** `superpowers:subagent-driven-development` - one subagent per ticket, **five in flight at most** (Shared machine). More free tickets than slots: queue them and dispatch as agents return. Give each the ticket body verbatim; assume it has seen nothing of this conversation.
 **REQUIRED SUB-SKILL:** `superpowers:verification-before-completion` before any completion claim.
 
 Deferred tickets stay untouched and unassigned. Do not "just start" a blocked one.
@@ -230,5 +246,8 @@ From `build-waves.md`, the rules that bite: serialized files (`proxy.ts`, `app/l
 - "I'll tell him about the hitl ticket when I reach it" → too late. Claim time.
 - "I'll write my own decisions sheet" → one sheet, one owner, lowest live wave.
 - "I labelled the new ticket, they'll pick it up" → they will not. The frontier was already computed. Message them.
+- "Twelve free tickets, twelve agents" → five in flight, per wave. Queue the rest.
+- "Port 3000 is busy, I'll take 3001" → that is a second dev server. The one that answered is the shared one; use it.
+- "I'm done, I'll kill the dev server" → you did not start it, or someone else is still on it. Leave it up.
 - "I'll pick up a ticket from another wave" → you own one wave. Announce and hand over.
 - "I'll close the tickets after the PR merges" → close them now. Nobody else will.

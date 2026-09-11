@@ -124,6 +124,8 @@ REST reports `open`/`closed` lowercase; the GraphQL-backed `--json blockedBy` fi
 
 The protocol is generic. The `## Project conventions` section of `SKILL.md` is not — it names one repo's serialized files, its test gates, its labels and its copy rules. Replace that section with your own before using it elsewhere.
 
+The `## Shared machine` section is not generic either. It caps a wave at five concurrent agents and holds every session to a single shared dev server, because all the waves here run on one 8GB laptop. Those are the numbers for this machine - raise them for yours, but keep the shape: waves that each spawn as many agents as they have tickets will thrash whatever they run on, and a second `next dev` on a second port is the same RAM twice.
+
 ---
 
 ## Requires
