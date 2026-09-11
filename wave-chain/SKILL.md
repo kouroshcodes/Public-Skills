@@ -42,7 +42,15 @@ Every wave runs on one laptop, and the waves all run at the same time. These two
 lsof -ti:3000
 ```
 
-A PID means the shared server is already up - use it, and it makes no difference which wave started it. Start one only when nothing answers. Never kill a server you did not start, and when you finish, leave the one you did start running: another wave is probably mid-verification on it. A second `next dev` on port 3001 is not a workaround, it is the same RAM and a second set of file watchers on the same tree.
+A PID means the shared server is already up - use it, and it makes no difference which wave started it. Start one only when nothing answers. While any other session is live, never kill it, whoever started it: another wave is probably mid-verification on it. A second `next dev` on port 3001 is not a workaround, it is the same RAM and a second set of file watchers on the same tree.
+
+**Last session out reaps it.** Closing out your wave, check `ListAgents`. No other orchestrator still running means you are the last one, so kill the shared server before you finish, whoever started it:
+
+```bash
+lsof -ti:3000 | xargs kill
+```
+
+Any peer still live and you leave it up. This is the only deliberate kill, and it is what keeps the shared server from outliving the whole chain: nobody else's close-out will reap it, and a server left up for hours is the one that silently misses a route file added after it booted.
 
 These numbers are this machine's, like `## Project conventions` below. Change them together with that section when you adapt the skill.
 
