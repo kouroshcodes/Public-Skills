@@ -84,8 +84,17 @@ One GitHub issue, labelled `orchestrator`, that every session reads. It is delib
 
 | You type | It does |
 |---|---|
-| `/wave-chain` | Reads the open issues, converts prose dependencies into real `blockedBy` edges, writes the chain issue, tells you how many waves and prints the hand-off lines |
-| `/wave-chain 2`, or `GH Issue #148, Wave 2` | Runs wave 2: computes its frontier, registers, claims, fans out subagents, announces, closes out on GitHub |
+| `/wave-chain`, `--read` | Reads the open issues, verifies each one against the actual code, proposes the wave cut and the edges. **Writes nothing.** |
+| `/wave-chain --modify` | The same read, then applies it: closes what already shipped, labels the waves, creates real `blockedBy` edges, writes the chain issue. Shows you the plan and waits for your go before the first write. |
+| `/wave-chain --implement 2`, or `GH Issue #148, Wave 2` | Runs wave 2: computes its frontier, registers, claims, fans out subagents, announces, closes out on GitHub |
+| `/wave-chain --human` | Collects every decision that is blocking someone into one sheet, reads your answers back, closes the blockers they clear |
+| `/wave-chain --add 88` | Grafts an issue opened *after* the chain was built into the running chain, and tells the affected orchestrator it exists |
+
+**The default reads and does not write.** A command you might run by accident should never label fifty issues, so `--read` is what bare `/wave-chain` does. Every write lives behind `--modify`, `--implement` or `--add`.
+
+**Issues drift, so the read verifies them.** A backlog collects tickets that a later PR already satisfied. Each open ticket is checked against the repo and comes back `SHIPPED`, `PARTIAL` or `OPEN`, and the only evidence that counts is `file:line` in the actual code - never a doc, a state tracker or a previous session's report. `--modify` closes the `SHIPPED` ones with that evidence on the issue, so a wave never spends its parallelism re-doing finished work.
+
+**A new ticket needs a message, not a label.** `--add` exists because a running orchestrator computed its frontier once, before your ticket existed. Labelling the issue `wave:2` is invisible to it. `--add` places the ticket, wires its edges, and then `SendMessage`s the session that owns that wave.
 
 ---
 
