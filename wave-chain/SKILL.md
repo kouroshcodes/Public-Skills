@@ -170,7 +170,7 @@ One chain issue only - check `gh issue list --label orchestrator --state open` f
 Answer how many waves there are, then print the one way the owner should start it:
 
 ```
-claude --autocompact 450k
+claude --name wc<chain#>-lead --autocompact 450k
 /wave-chain --implement
 ```
 
@@ -201,7 +201,7 @@ Two traps: `gh issue list --json blockedBy` returns an **object** - the edges ar
 
 ## I2. Register, claim, isolate
 
-Comment on the chain issue: your wave number and your session name from `ListAgents`, so other orchestrators can address you. Without this you can compute that you owe an announcement but not where to send it.
+Comment on the chain issue: your wave number and your session name - `wc<chain#>-wave<K>` when the launcher started you, otherwise whatever `ListAgents` shows - so other orchestrators can address you. Without this you can compute that you owe an announcement but not where to send it.
 
 Then claim **your frontier tickets only** - the ones I1 computed as runnable: `gh issue edit <n> --add-assignee @me --add-label in-progress`. A blocked ticket stays unassigned and unlabelled, so whoever clears it can see at a glance that nobody is on it. `EnterWorktree` before the first edit. When the chain issue carries a `lead:` comment, base your worktree on `origin/wave-chain/<chain#>` from that comment, not on `main`.
 
@@ -301,6 +301,8 @@ The launcher only spawns tabs in the WezTerm window it runs in. It refuses when 
 
 ## L2. Register as lead
 
+**Session names are a convention, not a discovery.** The launcher starts every session with `--name`: waves are `wc<chain#>-wave<K>`, the lead is `wc<chain#>-lead`, a successor lead is `wc<chain#>-lead-2`, `-3`, and so on. Any session can address any other from the chain number alone, and `ListAgents` reads as a roster instead of a list of conversation titles. A session that was started without `--name` (the owner ran a wave by hand) still posts whatever name `ListAgents` shows it; the registration comment is the fallback, the convention is the fast path.
+
 Comment on the chain issue before the children register: `lead: <your ListAgents session name>, branch: wave-chain/<chain#>, chain PR: #<pr>, dev server: pid <pid> on :3000, launched: wave 1 pane P1, wave 2 pane P2, wave 3 pane P3, of <N>`. Every later launch, kill, and handover is another one-line comment in the same shape.. This comment is the switch every §I6 reads to decide whether its reports go to you or to the owner. Missing it, the children will write into their own tabs and the owner reads nothing.
 
 ## L3. The chain issue is your memory
@@ -358,7 +360,7 @@ Then mark the chain PR ready for review with a body that lists every ticket it c
 A lead that has been compacted is running on a summary of itself, and every message it handles from then on is billed against a long, lossy context. Hand over instead. Two triggers, whichever comes first: your context contains a "Conversation summary" block (you were compacted), or you have posted forty event lines on the chain issue since your L2 comment.
 
 1. Post `lead-handover: <your session name> -> pending` on the chain issue, with the live state under it, read from the chain issue and the PR - not from memory: which waves are live with their pane ids, which are launched-and-landed, which not yet launched, the dev server pid, open `hitl` items.
-2. Launch the successor in a new tab: `~/.claude/skills/wave-chain/scripts/launch-waves.sh <chain#> lead lead <repo-dir>`. It starts `claude --autocompact 450k --model opus '/wave-chain --implement'` and the skill's L1 sees the open handover comment and resumes instead of re-cutting a branch.
+2. Launch the successor in a new tab: `~/.claude/skills/wave-chain/scripts/launch-waves.sh <chain#> lead lead <repo-dir> <gen>`, where gen is 2 for the first handover, 3 for the next. It starts `claude --name wc<chain#>-lead-<gen> --autocompact 450k --model opus '/wave-chain --implement'` and the skill's L1 sees the open handover comment and resumes instead of re-cutting a branch.
 3. Wait for the successor's `lead:` comment. Then `SendMessage` every live wave: `lead is now <successor name>`. A wave reports to a session name, and one still using yours reports into the void.
 4. Comment `lead-handover: done -> <successor>` and stop. The branch, the PR, the dev server, and the tabs belong to nobody; the successor inherits them by reading the chain issue.
 

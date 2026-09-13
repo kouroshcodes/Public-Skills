@@ -5,9 +5,11 @@ A Claude Code skill that runs **many orchestrator sessions at once** over one Gi
 You open one WezTerm tab and type:
 
 ```
-claude --autocompact 450k
+claude --name wc148-lead --autocompact 450k
 /wave-chain --implement
 ```
+
+(`148` being your chain issue number; `--modify` prints the exact line.)
 
 Then you leave. When you come back, every ticket that did not need you is closed with its evidence on the issue, every wave's PR is merged into one chain branch, and one PR from that branch is waiting for your preview. The tickets that needed a decision from you are listed in that PR under *Waiting on you*, and collected into a single decisions sheet.
 
@@ -30,6 +32,7 @@ So the work is cut into waves, each wave is its own session with its own worktre
 Separate sessions mean separate tabs to read. You don't want that either. So `--implement` with no wave number makes the session you opened the **lead**:
 
 - It launches every wave as a sibling session in its own WezTerm tab. Sibling sessions, not subagents, because a wave needs its own worktree, its own agent budget and a name other sessions can message.
+- Every session has a fixed name: `wc<chain#>-lead`, `wc<chain#>-wave1`, `wc<chain#>-wave2`, and `wc<chain#>-lead-2` after a handover. Any session can message any other from the chain number alone.
 - It is the only session that talks to you. Waves report to it in a fixed two-line shape; it relays each line as it arrives.
 - It runs **no tickets**, reads **no diffs**, and keeps **no state in its head**. Merges go through a short-lived merge agent that returns a four-line verdict. Every event is one line on the chain issue, and after a context compaction the lead rebuilds from there.
 - It finishes last: final gates, GitHub audit, PR flipped from draft to ready, dev server stopped, one summary to you.
