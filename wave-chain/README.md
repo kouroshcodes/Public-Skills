@@ -122,7 +122,7 @@ A wave may not say `landed` until the audit passes for its wave. The lead may no
 | Money-moving or serialized-file tickets | Opus 5 | Where a cheaper worker's mistake costs more than the model. |
 | Read-phase verifiers | Haiku 4.5 | Grep and cite `file:line`. No reasoning depth needed. |
 
-All of this is baked in. The launcher starts wave tabs on Sonnet in `auto` permission mode so nothing stalls on a prompt in a tab nobody is watching. Override with `WAVE_CLAUDE_FLAGS` if you ever need to.
+All of this is baked in. The launcher starts wave tabs on Sonnet with the tools they need pre-allowed, so nothing stalls on a prompt in a tab nobody is watching. (`auto` mode still asks before writes and `bypassPermissions` shows a warning screen; both were tested and both stall.) Override with `WAVE_CLAUDE_FLAGS` if you ever need to.
 
 ---
 

@@ -329,7 +329,7 @@ Sibling sessions, not subagents: a wave needs its own worktree, its own five-age
 
 A tab spawned from inside a Claude session inherits that session's `CLAUDE_*` environment, and the child then takes the parent's name, is flagged a child session, and is hidden from `ListAgents` - which breaks every message to it. The launcher scrubs those variables before starting the child; spawn a session any other way and you must do the same.
 
-The launcher only spawns tabs in the WezTerm window it runs in. It refuses when `wezterm cli` cannot reach a WezTerm session - report that to the owner and stop. Never fall back to Terminal.app, `open -a`, or `osascript`; a native terminal window is a different app, and it is exactly what the owner does not want. The launcher starts every child in `auto` permission mode, because a child that stops on a permission prompt in a tab nobody watches is a dead wave. `WAVE_CLAUDE_FLAGS` overrides that only when the owner has set it himself; never ask him to.
+The launcher only spawns tabs in the WezTerm window it runs in. It refuses when `wezterm cli` cannot reach a WezTerm session - report that to the owner and stop. Never fall back to Terminal.app, `open -a`, or `osascript`; a native terminal window is a different app, and it is exactly what the owner does not want. The launcher starts every child with `acceptEdits` plus a pre-allowed tool list (`--allowedTools=Bash,Edit,Write,…`), because a child that stops on a permission prompt in a tab nobody watches is a dead wave - and both `auto` (asks before a write) and `bypassPermissions` (a warning screen needing Enter) do stop, verified. `WAVE_CLAUDE_FLAGS` overrides that only when the owner has set it himself; never ask him to.
 
 ## L2. Register as lead
 
