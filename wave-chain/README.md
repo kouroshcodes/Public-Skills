@@ -74,6 +74,15 @@ Human-gated tickets never stall a run. A wave that hits one sends `parked-human`
 
 ---
 
+## Who tests the code
+
+| Layer | Who | What |
+|---|---|---|
+| Per ticket | the worker | test-first, then two reviewer subagents: one against the ticket's Done-when, one for code quality; tests are run and shown before any completion claim |
+| Per wave | the wave orchestrator | reads the verdicts, checks evidence per ticket, Opus review pass on money-moving tickets, GitHub audit for its wave |
+| Per merge | the Opus merge agent | full gates on the chain branch, then **smoke on the running dev server**: every route or behaviour a Done-when names is hit on port 3000. Fail bounces and reverts the PR. This is the only moment a change is observable in the app, since a worker's worktree is not what the server serves. |
+| End of run | the lead, through agents | final gates, one **review of the whole chain PR** posted as inline comments, blocking findings fixed on the branch, then the audit, then ready for review |
+
 ## GitHub is the deliverable
 
 The thing that goes wrong most often with long agent runs: you come back, the chat says "done", and GitHub says otherwise. A ticket left `in-progress`, a closed ticket with no evidence, a PR whose body says "see the diff".

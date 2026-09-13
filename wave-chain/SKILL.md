@@ -309,14 +309,17 @@ Your context will be compacted during a long run. Plan for it: nothing you need 
 
 ## L4. Merge through an agent, never by hand
 
-A child's PR targets `wave-chain/<chain#>` and stays open until it is merged into the chain branch. You are the only merger, but you never merge in your own context. Per "PR ready" message, dispatch one `opus` merge subagent with this brief: in the repo root checkout (the one on `wave-chain/<chain#>`, not a worktree - the dev server serves this tree, so a merge here is live on it at once), merge PR #<n> into `wave-chain/<chain#>`, run the gates, resolve any conflict on the chain branch, push, tick every ticket that PR closed in the chain PR body (`- [ ] #t` becomes `- [x] #t (PR #n)`, via `gh pr edit --body-file`), and return **only** this:
+A child's PR targets `wave-chain/<chain#>` and stays open until it is merged into the chain branch. You are the only merger, but you never merge in your own context. Per "PR ready" message, dispatch one `opus` merge subagent with this brief: in the repo root checkout (the one on `wave-chain/<chain#>`, not a worktree - the dev server serves this tree, so a merge here is live on it at once), merge PR #<n> into `wave-chain/<chain#>`, run the gates, resolve any conflict on the chain branch, push, **smoke it on the dev server** - for every Done-when line of the tickets in that PR that names a route, a page, or a visible behaviour, hit it on `http://localhost:3000` (curl for status and expected text; a browser check when a Done-when is visual) and read the server log for new errors - tick every ticket that PR closed in the chain PR body (`- [ ] #t` becomes `- [x] #t (PR #n)`, via `gh pr edit --body-file`), and return **only** this:
 
 ```
 PR: #<n>   result: merged | conflict-resolved | bounced
 gates: pass | fail <which>
+smoke: pass | fail <route or behaviour> | n/a
 conflicts: none | <files>
 note: <one line>
 ```
+
+The merge is the only moment in the run where a change is observable in the running app: a worker's tree is a worktree the shared server does not serve. So a `smoke: fail` bounces the PR exactly like a gate failure, with what was hit and what came back commented on the PR - a page that builds, lints, and passes its unit tests can still render blank, and this is the line that catches it. A `bounced` PR is reverted from the chain branch by the same agent before it returns, so the branch is never left carrying a change that failed.
 
 Diffs, gate logs, and conflict hunks stay in the merge agent. A `bounced` verdict goes back to the child by `SendMessage` with the link to the failure comment the agent left on the PR, not with the log text. One merge agent at a time, so two waves' PRs never race on the branch.
 
@@ -344,8 +347,9 @@ A finished wave does not exit on its own - an interactive session sits at its pr
 
 1. Dispatch one final merge agent to run the full gates on the chain branch and report in the L4 shape.
 2. **Audit the whole chain**: `~/.claude/skills/wave-chain/scripts/gh-audit.sh <chain#>`. Fix every `FAIL` on GitHub yourself - a ticket a dead wave left `in-progress`, a closed ticket without its evidence comment, a wave PR still open, an unticked checklist line - and rerun until `AUDIT PASS`. You do not finish on a `FAIL`, and you do not hand a `FAIL` to the owner as a to-do.
-3. Fill the `## Waiting on Kourosh` section of the chain PR body with every `parked-human` ticket and its one-line reason.
-4. **If that section is not empty, build the §H decisions sheet now**, as part of this close-out, with every open `hitl` item on it - the owner answers it in one sitting and re-runs `--implement`; the next lead finds the answers in the inbox file.
+3. **Review the whole chain PR once**, where the waves' changes meet: dispatch one `opus` review subagent with the chain PR number and this brief - review the full diff of the PR for correctness bugs and for changes from different waves that contradict each other, post each real finding as an inline PR comment with the file and line, ignore style, and return only `review: <n> findings, <m> blocking`. Every blocking finding goes through a merge agent as a fix on the chain branch, then gates and smoke again, then the audit in step 2 reruns. You do not mark the PR ready with a blocking finding open; the owner opens a PR that has already been reviewed once, with the review visible on it.
+4. Fill the `## Waiting on Kourosh` section of the chain PR body with every `parked-human` ticket and its one-line reason.
+5. **If that section is not empty, build the §H decisions sheet now**, as part of this close-out, with every open `hitl` item on it - the owner answers it in one sitting and re-runs `--implement`; the next lead finds the answers in the inbox file.
 
 Then mark the chain PR ready for review with a body that lists every ticket it closes and every wave PR it absorbed, kill the dev server you started (`lsof -ti:3000 | xargs kill`) - you are the only session allowed to, and this is the only moment, and give the owner one final summary that is built from the audit output and the chain PR, not from memory: per wave, tickets closed and not, elapsed time since the L2 comment, the one PR link with its preview deployment URL if the PR checks expose one, and the path of the decisions sheet if one was built. Every line in that summary points at something already on GitHub. **Never merge the chain PR.** Merging into `main` is the owner's click, after his preview.
 
@@ -412,6 +416,8 @@ From `build-waves.md`, the rules that bite: serialized files (`proxy.ts`, `app/l
 - "wezterm cli failed, I'll open Terminal.app" → no. Report it and stop. WezTerm tab or nothing.
 - "The owner can read the wave tabs himself" → he opened one session on purpose. Every report routes through the lead.
 - "I'm the lead, I'll run wave 1 myself while I wait" → the lead runs nothing. Wave 1 is a tab.
+- "Gates are green, no need to hit the route" → green gates have shipped blank pages. Smoke is a verdict line, not optional.
+- "Each ticket was reviewed, the PR is reviewed" → each reviewer saw one ticket. The chain PR gets one review as a whole.
 - "It's a small PR, I'll merge it here" → merge agent, fixed verdict. A diff in the lead's context is a diff it carries for hours.
 - "I'll paste the failing output in the message" → comment it on the ticket, message the number.
 - "I remember which waves are done" → after compaction you do not. The chain issue does.
