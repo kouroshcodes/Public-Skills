@@ -1,0 +1,110 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="720" viewBox="0 0 1200 720" font-family="ui-sans-serif, -apple-system, Segoe UI, Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#8b949e"/></marker>
+    <marker id="g" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#3fb950"/></marker>
+    <marker id="p" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#d2a8ff"/></marker>
+  </defs>
+  <rect width="1200" height="720" rx="16" fill="#0d1117"/>
+
+  <!-- title -->
+  <text x="40" y="48" fill="#e6edf3" font-size="22" font-weight="700">wave-chain · one session in, one PR out</text>
+  <text x="40" y="72" fill="#8b949e" font-size="14">You type /wave-chain --implement and leave. Everything below happens without you.</text>
+
+  <!-- owner -->
+  <g>
+    <rect x="40" y="110" width="200" height="72" rx="10" fill="#161b22" stroke="#30363d"/>
+    <text x="140" y="140" text-anchor="middle" fill="#e6edf3" font-size="15" font-weight="600">You</text>
+    <text x="140" y="162" text-anchor="middle" fill="#8b949e" font-size="12">one WezTerm tab · Opus</text>
+  </g>
+
+  <!-- lead -->
+  <g>
+    <rect x="40" y="230" width="200" height="150" rx="10" fill="#1f2a44" stroke="#58a6ff"/>
+    <text x="140" y="258" text-anchor="middle" fill="#e6edf3" font-size="15" font-weight="700">Lead</text>
+    <text x="140" y="280" text-anchor="middle" fill="#8b949e" font-size="12">Opus · runs no tickets</text>
+    <text x="52" y="306" fill="#c9d1d9" font-size="12">• cuts chain branch + draft PR</text>
+    <text x="52" y="324" fill="#c9d1d9" font-size="12">• starts the one dev server</text>
+    <text x="52" y="342" fill="#c9d1d9" font-size="12">• opens N tabs, relays, merges</text>
+    <text x="52" y="360" fill="#c9d1d9" font-size="12">• audits GitHub, finishes last</text>
+  </g>
+  <line x1="140" y1="182" x2="140" y2="228" stroke="#8b949e" stroke-width="1.5" marker-end="url(#a)" marker-start="url(#a)"/>
+  <text x="150" y="210" fill="#8b949e" font-size="11">only voice you hear</text>
+
+  <!-- waves -->
+  <g id="waves">
+    <rect x="330" y="110" width="300" height="118" rx="10" fill="#161b22" stroke="#30363d"/>
+    <text x="345" y="134" fill="#e6edf3" font-size="14" font-weight="600">Wave 1 tab · Sonnet</text>
+    <text x="345" y="154" fill="#8b949e" font-size="12">own worktree from chain branch</text>
+    <g fill="#238636"><rect x="345" y="170" width="44" height="40" rx="6"/><rect x="397" y="170" width="44" height="40" rx="6"/><rect x="449" y="170" width="44" height="40" rx="6"/><rect x="501" y="170" width="44" height="40" rx="6"/><rect x="553" y="170" width="44" height="40" rx="6"/></g>
+    <text x="471" y="195" text-anchor="middle" fill="#e6edf3" font-size="11">5 workers max · Sonnet, Opus for money tickets</text>
+
+    <rect x="330" y="248" width="300" height="118" rx="10" fill="#161b22" stroke="#30363d"/>
+    <text x="345" y="272" fill="#e6edf3" font-size="14" font-weight="600">Wave 2 tab · Sonnet</text>
+    <text x="345" y="292" fill="#8b949e" font-size="12">runs its free tickets, parks the blocked ones</text>
+    <g fill="#238636"><rect x="345" y="308" width="44" height="40" rx="6"/><rect x="397" y="308" width="44" height="40" rx="6"/><rect x="449" y="308" width="44" height="40" rx="6"/><rect x="501" y="308" width="44" height="40" rx="6"/></g>
+    <rect x="553" y="308" width="44" height="40" rx="6" fill="#161b22" stroke="#d29922" stroke-dasharray="4 3"/>
+    <text x="575" y="332" text-anchor="middle" fill="#d29922" font-size="11">wait</text>
+
+    <rect x="330" y="386" width="300" height="118" rx="10" fill="#161b22" stroke="#30363d"/>
+    <text x="345" y="410" fill="#e6edf3" font-size="14" font-weight="600">Wave 3 tab · Sonnet</text>
+    <text x="345" y="430" fill="#8b949e" font-size="12">same rules, same machine caps</text>
+    <g fill="#238636"><rect x="345" y="446" width="44" height="40" rx="6"/><rect x="397" y="446" width="44" height="40" rx="6"/><rect x="449" y="446" width="44" height="40" rx="6"/></g>
+    <rect x="501" y="446" width="44" height="40" rx="6" fill="#161b22" stroke="#d29922" stroke-dasharray="4 3"/>
+    <rect x="553" y="446" width="44" height="40" rx="6" fill="#161b22" stroke="#f85149" stroke-dasharray="4 3"/>
+    <text x="523" y="470" text-anchor="middle" fill="#d29922" font-size="11">wait</text>
+    <text x="575" y="470" text-anchor="middle" fill="#f85149" font-size="11">hitl</text>
+  </g>
+
+  <!-- lead -> waves launch -->
+  <path d="M240 300 C 290 300, 290 169, 328 169" fill="none" stroke="#58a6ff" stroke-width="1.5" marker-end="url(#a)"/>
+  <path d="M240 305 L 328 307" fill="none" stroke="#58a6ff" stroke-width="1.5" marker-end="url(#a)"/>
+  <path d="M240 310 C 290 310, 290 445, 328 445" fill="none" stroke="#58a6ff" stroke-width="1.5" marker-end="url(#a)"/>
+  <text x="262" y="255" fill="#58a6ff" font-size="11">launch-waves.sh</text>
+
+  <!-- wave-to-wave unblock -->
+  <path d="M600 210 C 660 210, 660 330, 599 330" fill="none" stroke="#d2a8ff" stroke-width="1.5" marker-end="url(#p)"/>
+  <text x="668" y="256" fill="#d2a8ff" font-size="11">SendMessage:</text>
+  <text x="668" y="270" fill="#d2a8ff" font-size="11">"#115 merged"</text>
+
+  <!-- github column -->
+  <g>
+    <rect x="760" y="110" width="400" height="394" rx="10" fill="#161b22" stroke="#30363d"/>
+    <text x="780" y="138" fill="#e6edf3" font-size="15" font-weight="700">GitHub · the deliverable</text>
+
+    <rect x="780" y="156" width="360" height="70" rx="8" fill="#0d1117" stroke="#30363d"/>
+    <text x="795" y="178" fill="#e6edf3" font-size="13" font-weight="600">chain issue</text>
+    <text x="795" y="196" fill="#8b949e" font-size="11">lead registration · wave registry · every event, one line</text>
+    <text x="795" y="212" fill="#8b949e" font-size="11">the lead's memory after compaction</text>
+
+    <rect x="780" y="238" width="360" height="90" rx="8" fill="#0d1117" stroke="#30363d"/>
+    <text x="795" y="260" fill="#e6edf3" font-size="13" font-weight="600">wave-chain/&lt;chain#&gt; branch</text>
+    <text x="795" y="278" fill="#8b949e" font-size="11">wave PRs target it · Opus merge agent, one at a time</text>
+    <text x="795" y="294" fill="#8b949e" font-size="11">gates run on every merge · dev server serves it</text>
+    <text x="795" y="314" fill="#3fb950" font-size="11">blockedBy edges are the only lock</text>
+
+    <rect x="780" y="340" width="360" height="150" rx="8" fill="#0d1117" stroke="#3fb950"/>
+    <text x="795" y="362" fill="#e6edf3" font-size="13" font-weight="600">the one PR you read</text>
+    <text x="795" y="382" fill="#8b949e" font-size="11">wave-chain/&lt;chain#&gt; → main · draft until the end</text>
+    <text x="795" y="404" fill="#c9d1d9" font-size="12">☑ #12 (PR #201)   ☑ #15 (PR #204)</text>
+    <text x="795" y="422" fill="#c9d1d9" font-size="12">☑ #70 (PR #208)   ☐ #76  waiting on #70</text>
+    <text x="795" y="444" fill="#f85149" font-size="12">Waiting on you: #51 (hitl)</text>
+    <text x="795" y="470" fill="#3fb950" font-size="11">gh-audit.sh must print AUDIT PASS before anyone says "landed"</text>
+    <text x="795" y="484" fill="#8b949e" font-size="11">never merged by an agent — that click is yours</text>
+  </g>
+
+  <!-- waves -> github -->
+  <path d="M630 169 L 758 190" fill="none" stroke="#3fb950" stroke-width="1.5" marker-end="url(#g)"/>
+  <path d="M630 307 L 758 283" fill="none" stroke="#3fb950" stroke-width="1.5" marker-end="url(#g)"/>
+  <path d="M630 445 L 758 290" fill="none" stroke="#3fb950" stroke-width="1.5" marker-end="url(#g)"/>
+  <text x="662" y="150" fill="#3fb950" font-size="11">PR "wave K: …"</text>
+
+  <!-- lead -> github audit -->
+  <path d="M140 380 L 140 560 L 960 560 L 960 506" fill="none" stroke="#58a6ff" stroke-width="1.5" stroke-dasharray="6 4" marker-end="url(#a)"/>
+  <text x="150" y="552" fill="#58a6ff" font-size="11">merge · tick checklist · audit · mark ready · summary to you</text>
+
+  <!-- footer caps -->
+  <rect x="40" y="596" width="1120" height="84" rx="10" fill="#161b22" stroke="#30363d"/>
+  <text x="60" y="622" fill="#e6edf3" font-size="13" font-weight="600">Hard caps, one laptop</text>
+  <text x="60" y="644" fill="#8b949e" font-size="12">5 workers per wave · 3 waves = 15 agents, the ceiling · one dev server on :3000, owned by the lead · WezTerm tabs only</text>
+  <text x="60" y="666" fill="#8b949e" font-size="12">human-gated tickets are skipped, listed under "Waiting on you", and collected into one decisions sheet · a dead wave is relaunched once</text>
+</svg>

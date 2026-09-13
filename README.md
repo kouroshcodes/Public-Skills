@@ -22,11 +22,11 @@ No dependencies.
 
 ### [`wave-chain`](./wave-chain)
 
-Runs many orchestrator sessions at once over one GitHub backlog — one wave each, unblocking each other by message.
+Runs many orchestrator sessions at once over one GitHub backlog — one wave each, unblocking each other by message — and hands you back **one PR**.
 
-Waves decide who owns what; they are **not** barriers. The lock is per ticket, as GitHub's native `blockedBy` edges an agent can query, so a session with two blocked tickets runs its other fourteen instead of idling a whole wave. When a session closes a blocker it **messages** whoever was waiting, who re-verifies the edge before starting — no polling, no status column going stale. Questions that need you are surfaced at claim time and collected into one decision sheet rather than N interruptions.
+You open one session, type `/wave-chain --implement`, and leave. A lead session launches every wave in its own WezTerm tab, merges their PRs into one chain branch, audits that GitHub actually reflects the run, and gives you a single PR to preview. Waves decide who owns what; they are **not** barriers. The lock is per ticket, as GitHub's native `blockedBy` edges an agent can query, so a session with two blocked tickets runs its other fourteen instead of idling a whole wave. When a session closes a blocker it **messages** whoever was waiting, who re-verifies the edge before starting — no polling, no status column going stale. Questions that need you are surfaced at claim time and collected into one decision sheet rather than N interruptions.
 
-Requires the [`superpowers`](https://github.com/obra/superpowers) plugin.
+Requires the [`superpowers`](https://github.com/obra/superpowers) plugin and WezTerm for lead mode.
 
 ---
 
