@@ -5,7 +5,7 @@ A Claude Code skill that runs **many orchestrator sessions at once** over one Gi
 You open one WezTerm tab and type:
 
 ```
-claude
+claude --autocompact 450k
 /wave-chain --implement
 ```
 
@@ -33,8 +33,9 @@ Separate sessions mean separate tabs to read. You don't want that either. So `--
 - It is the only session that talks to you. Waves report to it in a fixed two-line shape; it relays each line as it arrives.
 - It runs **no tickets**, reads **no diffs**, and keeps **no state in its head**. Merges go through a short-lived merge agent that returns a four-line verdict. Every event is one line on the chain issue, and after a context compaction the lead rebuilds from there.
 - It finishes last: final gates, GitHub audit, PR flipped from draft to ready, dev server stopped, one summary to you.
+- It hands over before it gets dumb. A lead that has been compacted, or has handled forty events, posts its state on the chain issue, launches a fresh lead in a new tab, tells every wave the new name, and exits. Waves always report to the latest lead.
 
-The lead's context stays small because it never holds anything that isn't a launch, a one-line message or a four-line verdict.
+The lead's context stays small because it never holds anything that isn't a launch, a one-line message or a four-line verdict, and it is replaced before compaction turns it into a summary of itself.
 
 ---
 
@@ -122,11 +123,21 @@ All of this is baked in. The launcher starts wave tabs on Sonnet in `auto` permi
 
 ---
 
+## How many waves, and how big
+
+Two different numbers, easy to confuse:
+
+- **How many waves** is set by the work: the longest dependency chain in the backlog. Three-deep means three waves whether there are twelve tickets or two hundred. No dependencies means one wave. A wide layer is split by area into several waves with no edges between them, so a wave stays around ten to twenty tickets.
+- **How many run at once** is set by the laptop: three. A six-wave chain runs through that three at a time; the lead launches the next wave into each freed slot. Later waves depend on earlier ones anyway, so starting them late costs almost nothing.
+
+The cut rules the read phase follows are in §R3 of `SKILL.md`: real edges only, wave equals longest path from a root, never balance by adding edges, split wide layers by area, foundations first inside a wave, human-blocked work last.
+
 ## Hard caps
 
 Everything runs on one laptop, so these are ceilings, not targets:
 
-- **Five workers per wave.** Three waves is fifteen agents, and that is the machine's limit.
+- **Five workers per wave, three waves live at once.** Fifteen agents is the machine's limit.
+- **Context windows below the model's.** Wave tabs compact at 600K, leads at 450K. The smart part of a session is its first few hundred thousand tokens; the launcher sets both.
 - **One dev server**, on port 3000, started by the lead before any wave exists and stopped by the lead after the last one finishes. A wave never starts or kills one.
 - **WezTerm tabs only.** The launcher refuses to run outside WezTerm rather than fall back to another terminal.
 
@@ -156,7 +167,7 @@ gh api -X POST repos/OWNER/REPO/issues/51/dependencies/blocked_by -F issue_id=$B
 | Path | What |
 |---|---|
 | `SKILL.md` | The protocol. Modes §R, §M, §L, §I, §H, §D, plus the red-flags list. |
-| `scripts/launch-waves.sh` | Opens one WezTerm tab per wave, each running its own Claude session. |
+| `scripts/launch-waves.sh` | Opens one WezTerm tab per wave, or a successor lead, each its own Claude session with the right model and context window. |
 | `scripts/gh-audit.sh` | Verifies GitHub reflects the run. Exit 1 on any `FAIL`. |
 | `references/chain-issue.md` | Template for the chain issue. |
 

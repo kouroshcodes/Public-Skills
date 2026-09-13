@@ -6,9 +6,9 @@ Template for the chain issue body. Replace every `<…>`.
 
 **Index and hand-off for the wave agents. This issue is not a lock.**
 
-The lock is on the tickets themselves, as GitHub `blockedBy` edges you can query. `docs/agents/build-waves.md` is the authority: *"waves are a planning view, not a barrier."* All waves start at once.
+The lock is on the tickets themselves, as GitHub `blockedBy` edges you can query. `docs/agents/build-waves.md` is the authority: *"waves are a planning view, not a barrier."* With a lead (`/wave-chain --implement`), the lead launches waves three at a time, lowest first, into its WezTerm window; by hand, start as many as the machine allows.
 
-Hand-off line for a session: `GH Issue #<this issue>, Wave <K>`
+Hand-off line for a session run by hand: `GH Issue #<this issue>, Wave <K>`
 
 | Wave | What it is | Tickets | Blocked at launch |
 |---|---|---|---|
@@ -42,11 +42,13 @@ An agent finding one of these blocked leaves **that ticket** and runs its others
 
 This is how another orchestrator addresses you with `SendMessage` when it closes your blocker.
 
+With a lead, the lead's own `lead: <session>, branch: …, chain PR: …, dev server: …, launched: …` comment sits here too, and every later launch, merge, kill, and `lead-handover` is one more line. Waves report to the session in the **latest** `lead:` comment. This thread is the lead's memory; it is rebuilt from here after a compaction or a handover.
+
 ## Waiting on the owner — flow-breaking only
 
 A `hitl` ticket goes here **only if something's `blockedBy` points at it**. Post it the moment you find it, at claim time.
 
-The orchestrator of the **lowest-numbered wave still running** owns the decision sheet: it assembles every item below into one dark HTML sheet at `~/Desktop/<repo>-decisions.html` and reads answers back from `inbox/<repo>-decisions.md`. No other session writes that file.
+With a lead, the lead owns the decision sheet for the whole run. Otherwise the orchestrator of the **lowest-numbered wave still running** owns it: it assembles every item below into one dark HTML sheet at `~/Desktop/<repo>-decisions.html` and reads answers back from `inbox/<repo>-decisions.md`. No other session writes that file.
 
 - [ ] #<n> — blocks #<m> (Wave <K>) — <the question, concretely>
 
@@ -73,9 +75,10 @@ The orchestrator of the **lowest-numbered wave still running** owns the decision
 
 ## Finishing
 
-1. Commit, push, open the PR.
+1. Commit, push, open the PR titled `wave K: …`, against `wave-chain/<this issue>` when there is a lead, else `main`.
 2. Per ticket: comment with evidence per Done-when line and the PR link, `--remove-label in-progress`, close — only if Done-when passed. One that did not land stays open with a comment saying why.
 3. Comment here: what landed, what did not, serialized files touched.
 4. Re-run your frontier and send your announcements.
+5. `scripts/gh-audit.sh <this issue> <K>` must print `AUDIT PASS` before your `landed` line.
 
 Leaving tickets open while reporting a wave finished is the failure this issue exists to prevent.

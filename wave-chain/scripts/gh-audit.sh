@@ -16,14 +16,15 @@ gh issue list --state all --limit 300 \
   --json number,state,labels,assignees,comments \
   --jq ".[] | select(any($sel; true)) | select(all(.labels[].name; . != \"hitl\")) |
         {n:.number, s:.state, ip:(any(.labels[].name; . == \"in-progress\")),
-         last:(.comments | sort_by(.createdAt) | last | {b:.body, t:.createdAt})}" \
+         last:(.comments | sort_by(.createdAt) | last | {b:.body, t:.createdAt}),
+         run:([.comments[] | select(.createdAt > \"$since\") | .body] | join(\"\\n\"))}" \
 | while IFS= read -r row; do
   n=$(jq -r .n <<<"$row"); st=$(jq -r .s <<<"$row"); ip=$(jq -r .ip <<<"$row")
-  body=$(jq -r '.last.b // ""' <<<"$row"); t=$(jq -r '.last.t // ""' <<<"$row")
+  body=$(jq -r '.run // ""' <<<"$row"); t=$(jq -r '.last.t // ""' <<<"$row")
   if [ "$st" = "OPEN" ] && [ "$ip" = "true" ]; then F "#$n open and still in-progress"; continue; fi
   if [ "$st" = "CLOSED" ]; then
     grep -Eq 'pull/[0-9]+' <<<"$body" && grep -Eiq 'done when|evidence|[a-z0-9_./-]+:[0-9]+' <<<"$body" \
-      && OK "#$n closed with PR + evidence" || F "#$n closed but last comment lacks PR link or file:line evidence"
+      && OK "#$n closed with PR + evidence" || F "#$n closed but no comment this run carries a PR link and file:line evidence"
     continue
   fi
   if [ "$st" = "OPEN" ]; then

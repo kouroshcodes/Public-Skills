@@ -6,7 +6,7 @@ metadata:
   author: kourosh
 ---
 
-N orchestrators start at the **same time**, one per wave, all pointed at one chain issue. Waves decide who owns which tickets. They are not barriers, and no wave waits for another wave as a unit.
+N orchestrators, one per wave, all pointed at one chain issue, as many running at once as the machine allows. Waves decide who owns which tickets. They are not barriers, and no wave waits for another wave as a unit.
 
 **The lock is per ticket, and it is queryable.** GitHub's native `blockedBy` edges are the only lock. Never a status column, never prose in a body, never a guess. An orchestrator that finds one of its tickets blocked leaves that ticket and runs its others - it does not idle a whole wave over one edge.
 
@@ -35,9 +35,9 @@ If the project has a build/orchestration protocol doc (here, `docs/agents/build-
 
 ## Shared machine
 
-Every wave runs on one laptop, and the waves all run at the same time. These two are hard caps, not targets.
+Every wave runs on one laptop. These are hard caps on what runs **at the same time**, not on how many waves a project has - a six-wave chain runs through them three at a time.
 
-**Five parallel agents per wave, maximum.** Count every subagent you have in flight, not the tickets you own. Three waves running means fifteen agents on one machine, which is already the ceiling. A sixth agent in a wave does not finish sooner, it slows the other five and pushes the machine into swap. More tickets than slots: queue them and dispatch as agents return.
+**Five parallel agents per wave, maximum.** Count every subagent you have in flight, not the tickets you own. Three waves running at once means fifteen agents on one machine, which is already the ceiling; the lead never has more than three wave sessions live (§L1). A sixth agent in a wave does not finish sooner, it slows the other five and pushes the machine into swap. More tickets than slots: queue them and dispatch as agents return.
 
 **One dev server, shared by every session.** Never start a second. With a lead (§L), the lead starts it before any wave exists and is the only session that stops it; a wave never starts one and never kills one, whatever port 3000 says. Without a lead, before you start anything:
 
@@ -54,6 +54,8 @@ lsof -ti:3000 | xargs kill
 ```
 
 Any peer still live and you leave it up. This is the only deliberate kill, and it is what keeps the shared server from outliving the whole chain: nobody else's close-out will reap it, and a server left up for hours is the one that silently misses a route file added after it booted.
+
+**Context windows are capped below the model's.** A session that runs to 967K tokens before compaction has spent most of that on a lossy tail; the smart part of a session is its first few hundred thousand tokens. So: wave tabs run with `--autocompact 600k` (the launcher sets it), the lead with `--autocompact 450k` (the owner starts it that way, see M7; a successor lead is launched that way by §L7). A wave that compacts finishes its wave on the summary plus GitHub; a lead that compacts hands over (§L7).
 
 These numbers are this machine's, like `## Project conventions` below. Change them together with that section when you adapt the skill.
 
@@ -95,7 +97,18 @@ A dependency that lives only in prose ("after the endpoint lands") cannot be que
 gh api repos/{owner}/{repo}/issues/<n>/dependencies/blocked_by --jq '[.[] | select(.state=="open") | .number]'
 ```
 
-Then cut the `OPEN` and `PARTIAL` tickets into waves, respecting those edges: a ticket never sits in an earlier wave than its blocker.
+Then cut the `OPEN` and `PARTIAL` tickets into waves. The cut is mechanical, and the report shows its working so the owner checks the edges, not the arithmetic:
+
+1. **Clean first.** A ticket without `## Done when` cannot be verified, so it cannot be scheduled: label it `needs-info` and leave it out. A ticket that is three tickets is split before it is placed.
+2. **Real edges only.** B depends on A when B's Done-when cannot be built or tested without A's code: a migration B reads, an endpoint B calls, a type B imports, a component B renders inside. "Same area", "nicer first", and "related" are not edges. Every proposed edge carries its reason. A fake edge adds a wave, and depth is the only thing that costs time.
+3. **Wave = longest path from a root.** No open blocker: wave 1. Otherwise: the wave after the deepest blocker. Never earlier, never later. Print the layers.
+4. **Never balance by adding edges.** Uneven is fine. Waves run in parallel and only tickets wait, so a two-ticket wave 5 costs almost nothing.
+5. **Split a wide layer by area, not by edge.** A layer over ~20 tickets becomes several waves with no edges between them, grouping tickets that touch the same files. Two sessions run it instead of one queueing, and tickets that would conflict at merge sit in the same wave where one orchestrator serializes them. Under ~5 tickets and the edges allow it: fold into the neighbour.
+6. **Foundations first inside a wave.** Order by how many tickets depend on each one; the migration five tickets wait on gets the first `## Build slot`, not the fifth.
+7. **`hitl`-blocked work goes in the last wave**, so the run does everything it can before it stops on the owner. The `hitl` ticket itself is outside the waves.
+8. **Migrations in one wave, in order.** Timestamps are assigned at dispatch; spread across waves, two sessions assign colliding ones.
+
+The number of waves is the depth of the graph plus the area splits. It is whatever the work is; three is how many run at once, not a budget.
 
 ## R4. Carve out what is not agent work
 
@@ -154,14 +167,21 @@ One chain issue only - check `gh issue list --label orchestrator --state open` f
 
 ## M7. Hand it over
 
-Answer how many waves there are, then print one line per wave, copy-pasteable:
+Answer how many waves there are, then print the one way the owner should start it:
+
+```
+claude --autocompact 450k
+/wave-chain --implement
+```
+
+and, for running a single wave by hand, one line per wave:
 
 ```
 GH Issue #<chain#>, Wave 1
 GH Issue #<chain#>, Wave 2
 ```
 
-All of them start at once. Say which tickets are blocked at launch and which are `hitl`. Do not implement anything.
+Say which tickets are blocked at launch and which are `hitl`. Do not implement anything.
 
 ---
 
@@ -210,7 +230,7 @@ Comment the item on the chain issue, then let §H carry it.
 
 When only blocked tickets remain, report - which tickets, which wave, and **which kind of wait**: agent-gated ("Wave 1 is finishing #24, landing soon") or human-gated ("needs Kourosh, no ETA"). On a human-gated wait, stop holding and report. A silent session is indistinguishable from a dead one. With a lead, a human-gated wait also means you are finished: the owner is away and answers when he is back, so send the `parked-human` line, leave the ticket open and unassigned, do your I7 close-out for everything that did land, and exit. The lead lists it in the final summary as waiting on him; nobody idles in a tab for hours over it.
 
-**Where the report goes depends on one observable fact.** If the chain issue carries a `lead:` registration comment (§L2), you were launched by a lead: `SendMessage` the report to that session name and write nothing for the owner - he is not reading your tab. If there is no `lead:` comment, you were opened by hand and the owner is your reader: tell him in chat. The same routing applies to every I7 close-out summary and every §I5 `hitl` item.
+**Where the report goes depends on one observable fact.** If the chain issue carries a `lead:` registration comment (§L2), you were launched by a lead: `SendMessage` the report to the session named in the **latest** such comment - re-read it before every message, leads hand over (§L7) - and write nothing for the owner - he is not reading your tab. If there is no `lead:` comment, you were opened by hand and the owner is your reader: tell him in chat. The same routing applies to every I7 close-out summary and every §I5 `hitl` item.
 
 **A message to the lead is exactly this, and nothing after it:**
 
@@ -237,7 +257,9 @@ The owner opens one session - on Opus - and talks to one session. The lead is a 
 
 ## L1. Branch, count, launch
 
-Cut the chain branch first, from the default branch, and push it:
+Three checks before anything, each a stop-and-report if it fails: there is exactly one open `orchestrator` issue with `wave:*` labels on tickets (otherwise the owner runs `--modify` first); `git status --porcelain` is empty in the repo root (the chain branch is cut from this checkout, and a dirty tree would carry the owner's uncommitted work onto it); `wezterm cli list` answers.
+
+Cut the chain branch, from the default branch, and push it:
 
 ```bash
 git fetch origin && git switch -c wave-chain/<chain#> origin/main && git push -u origin wave-chain/<chain#>
@@ -265,13 +287,13 @@ Then open the one PR the owner will ever read, as a draft, `wave-chain/<chain#>`
 
 That body is the progress view: it is ticked as merges land (L4), so opening the PR at any time shows what is in it. It stays a draft until L6. Every wave's work lands on this branch and nowhere else; the owner previews and checks one PR, not N.
 
-Read the chain issue and take the wave count from it - never from memory of a `--modify` in another session. Then open **every** wave, 1 to N, as a real sibling session, one WezTerm tab each, from the skill's launcher:
+Read the chain issue and take the wave count from it - never from memory of a `--modify` in another session. Then launch waves as real sibling sessions, one WezTerm tab each, from the skill's launcher - **at most three live at once**, lowest-numbered first:
 
 ```bash
-~/.claude/skills/wave-chain/scripts/launch-waves.sh <chain#> 1 <N> <repo-dir>
+~/.claude/skills/wave-chain/scripts/launch-waves.sh <chain#> 1 3 <repo-dir>
 ```
 
-Wave 1 is a tab like the others. The lead running a wave itself is the single biggest way its context fills: five subagents' prompts, results, and verification output, all landing in the one session that has to last the longest.
+The launcher prints one `wave K -> wezterm pane P` line per tab; keep those pane ids in your L2 comment. Each time a wave sends `landed` (or is declared dead twice, §L4b), close its tab - `wezterm cli kill-pane --pane-id P` - and launch the next unlaunched wave into the freed slot. Later waves are ordered after their blockers, so starting them late costs almost nothing, and starting six at once puts thirty agents on an eight-gigabyte machine. Wave 1 is a tab like the others. The lead running a wave itself is the single biggest way its context fills: five subagents' prompts, results, and verification output, all landing in the one session that has to last the longest.
 
 Sibling sessions, not subagents: a wave needs its own worktree, its own five-agent budget, and a name in `ListAgents` that peers can message. Subagents have none of that, and they die with the parent.
 
@@ -279,7 +301,7 @@ The launcher only spawns tabs in the WezTerm window it runs in. It refuses when 
 
 ## L2. Register as lead
 
-Comment on the chain issue before the children register: `lead: <your ListAgents session name>, branch: wave-chain/<chain#>, chain PR: #<pr>, dev server: pid <pid> on :3000, waves 1-<N> launched`. This comment is the switch every §I6 reads to decide whether its reports go to you or to the owner. Missing it, the children will write into their own tabs and the owner reads nothing.
+Comment on the chain issue before the children register: `lead: <your ListAgents session name>, branch: wave-chain/<chain#>, chain PR: #<pr>, dev server: pid <pid> on :3000, launched: wave 1 pane P1, wave 2 pane P2, wave 3 pane P3, of <N>`. Every later launch, kill, and handover is another one-line comment in the same shape.. This comment is the switch every §I6 reads to decide whether its reports go to you or to the owner. Missing it, the children will write into their own tabs and the owner reads nothing.
 
 ## L3. The chain issue is your memory
 
@@ -302,7 +324,7 @@ Only after a blocking ticket's PR is merged does its §I4 announcement go out: c
 
 ## L4b. A wave that vanished
 
-A wave session gone from `ListAgents` without a `landed` line is dead, not done. Relaunch it once, that wave only:
+A wave session gone from `ListAgents` without a `landed` line is dead, not done (a wave that has landed is one *you* closed, so its absence is expected). Relaunch it once, that wave only:
 
 ```bash
 ~/.claude/skills/wave-chain/scripts/launch-waves.sh <chain#> <K> <K> <repo-dir>
@@ -318,7 +340,7 @@ You own the §H decisions sheet for the whole chain. Build it from every wave's 
 
 ## L6. Finish last
 
-Stay up until `ListAgents` shows no wave session still running. Then, in this order:
+A finished wave does not exit on its own - an interactive session sits at its prompt forever - so "no wave running" is never something `ListAgents` will tell you. The finish condition is yours to compute: **every wave in the chain has sent `landed`, or been declared dead twice.** Then, in this order:
 
 1. Dispatch one final merge agent to run the full gates on the chain branch and report in the L4 shape.
 2. **Audit the whole chain**: `~/.claude/skills/wave-chain/scripts/gh-audit.sh <chain#>`. Fix every `FAIL` on GitHub yourself - a ticket a dead wave left `in-progress`, a closed ticket without its evidence comment, a wave PR still open, an unticked checklist line - and rerun until `AUDIT PASS`. You do not finish on a `FAIL`, and you do not hand a `FAIL` to the owner as a to-do.
@@ -326,6 +348,17 @@ Stay up until `ListAgents` shows no wave session still running. Then, in this or
 4. **If that section is not empty, build the §H decisions sheet now**, as part of this close-out, with every open `hitl` item on it - the owner answers it in one sitting and re-runs `--implement`; the next lead finds the answers in the inbox file.
 
 Then mark the chain PR ready for review with a body that lists every ticket it closes and every wave PR it absorbed, kill the dev server you started (`lsof -ti:3000 | xargs kill`) - you are the only session allowed to, and this is the only moment, and give the owner one final summary that is built from the audit output and the chain PR, not from memory: per wave, tickets closed and not, elapsed time since the L2 comment, the one PR link with its preview deployment URL if the PR checks expose one, and the path of the decisions sheet if one was built. Every line in that summary points at something already on GitHub. **Never merge the chain PR.** Merging into `main` is the owner's click, after his preview.
+
+## L7. Hand over before you get dumb
+
+A lead that has been compacted is running on a summary of itself, and every message it handles from then on is billed against a long, lossy context. Hand over instead. Two triggers, whichever comes first: your context contains a "Conversation summary" block (you were compacted), or you have posted forty event lines on the chain issue since your L2 comment.
+
+1. Post `lead-handover: <your session name> -> pending` on the chain issue, with the live state under it, read from the chain issue and the PR - not from memory: which waves are live with their pane ids, which are launched-and-landed, which not yet launched, the dev server pid, open `hitl` items.
+2. Launch the successor in a new tab: `~/.claude/skills/wave-chain/scripts/launch-waves.sh <chain#> lead lead <repo-dir>`. It starts `claude --autocompact 450k --model opus '/wave-chain --implement'` and the skill's L1 sees the open handover comment and resumes instead of re-cutting a branch.
+3. Wait for the successor's `lead:` comment. Then `SendMessage` every live wave: `lead is now <successor name>`. A wave reports to a session name, and one still using yours reports into the void.
+4. Comment `lead-handover: done -> <successor>` and stop. The branch, the PR, the dev server, and the tabs belong to nobody; the successor inherits them by reading the chain issue.
+
+On the receiving side (a lead started with an open `lead-handover` comment): skip L1's branch and server steps, take the pane ids and state from the handover comment, post your own `lead:` line, and carry on from L4. A wave always sends to the **latest** `lead:` comment on the chain issue - §I6 re-reads it before each message, which is one `gh` call and makes a missed step 3 harmless.
 
 ---
 
@@ -383,6 +416,10 @@ From `build-waves.md`, the rules that bite: serialized files (`proxy.ts`, `app/l
 - "I'll paste the failing output in the message" → comment it on the ticket, message the number.
 - "I remember which waves are done" → after compaction you do not. The chain issue does.
 - "All waves are done, I'm done" → the lead finishes last: final gates, PR ready for review, reap, summary.
+- "Six waves, six tabs" → three live at once. Launch into freed slots.
+- "ListAgents still shows wave 2, so it isn't done" → it sent `landed`; a finished tab never exits. You close it. Finish on `landed` lines, not on ListAgents.
+- "I've been compacted but I remember enough" → you remember a summary. Hand over (§L7).
+- "The tree has a few uncommitted files, I'll branch anyway" → those files ride the chain branch into the owner's PR. Stop and report.
 - "I'll open my PR against main, it's cleaner" → with a lead, the base is the chain branch. One PR for the owner, and it is the lead's.
 - "I'll tell him the details in chat, the PR is fine" → the PR is the deliverable. Write it there; the chat repeats it.
 - "I closed them all, no need to run the audit" → memory is not state. The audit runs, and `landed` carries `audit: pass`.
