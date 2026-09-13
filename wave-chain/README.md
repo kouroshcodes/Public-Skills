@@ -33,6 +33,7 @@ Separate sessions mean separate tabs to read. You don't want that either. So `--
 - It is the only session that talks to you. Waves report to it in a fixed two-line shape; it relays each line as it arrives.
 - It runs **no tickets**, reads **no diffs**, and keeps **no state in its head**. Merges go through a short-lived merge agent that returns a four-line verdict. Every event is one line on the chain issue, and after a context compaction the lead rebuilds from there.
 - It finishes last: final gates, GitHub audit, PR flipped from draft to ready, dev server stopped, one summary to you.
+- It relaunches a wave that died. A wave gone from the session list without a landed line is restarted once, and picks up its own in-progress tickets from GitHub. A second death is reported to you, tickets left open.
 - It hands over before it gets dumb. A lead that has been compacted, or has handled forty events, posts its state on the chain issue, launches a fresh lead in a new tab, tells every wave the new name, and exits. Waves always report to the latest lead.
 
 The lead's context stays small because it never holds anything that isn't a launch, a one-line message or a four-line verdict, and it is replaced before compaction turns it into a summary of itself.
@@ -59,16 +60,20 @@ sequenceDiagram
     W->>W: up to 5 workers, one per ticket
     W->>G: PR "wave K: …" against the chain branch
     W->>L: wave K  #12  ready  <PR>
-    L->>M: merge PR, run gates, tick checklist
-    M-->>L: PR #201 · merged · gates pass · conflicts none
+    L->>M: merge PR, run gates, smoke on :3000, tick checklist
+    M-->>L: PR #201 · merged · gates pass · smoke pass · conflicts none
     L->>W: merged
     W->>W: announce to whoever was blocked on #12
     W->>G: close #12 with PR link + file:line evidence
     W->>W: gh-audit.sh <chain#> K → AUDIT PASS
     W->>L: wave K  landed  audit: pass
-    L->>G: gh-audit.sh <chain#> → AUDIT PASS, fill "Waiting on you", mark PR ready
+    L->>G: gh-audit.sh <chain#> → AUDIT PASS
+    L->>M: one Opus review of the whole chain PR, findings as inline comments
+    L->>G: fix blocking findings, fill "Waiting on you", mark PR ready
     L->>K: one summary, built from the audit and the PR
 ```
+
+Only three wave tabs are live at once; when one lands, the lead closes its tab and launches the next wave into the slot. When the lead itself has been compacted or has handled forty events, it posts its state, launches a fresh lead, tells every wave the new name, and exits.
 
 Human-gated tickets never stall a run. A wave that hits one sends `parked-human`, closes out what it did land, and exits. The lead lists those tickets in the PR body and, if there are any, builds the decisions sheet as part of finishing. You answer the sheet in one sitting and run `--implement` again.
 
