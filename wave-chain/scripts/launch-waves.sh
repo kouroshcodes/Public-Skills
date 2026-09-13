@@ -5,13 +5,15 @@
 # Session names are fixed: wc<chain#>-wave<K>, wc<chain#>-lead, wc<chain#>-lead-<gen>.
 # Tabs open in the WezTerm window this script runs in. Never Terminal.app.
 # Unattended tabs must never stop on a prompt. Verified 2026-09-13:
-#   --permission-mode auto           still asks before a write        -> stalls
-#   --permission-mode bypassPermissions shows a one-time warning screen -> stalls
-#   acceptEdits + --allowedTools=...  writes with no prompt, no screen -> works
-# --allowedTools must be in --flag=value form: the space form swallows the prompt.
+#   --permission-mode auto on Sonnet/Opus: "auto mode on", writes with no prompt -> works
+#   --permission-mode auto on Haiku: silently falls back to manual mode and asks  -> stalls
+#   --permission-mode bypassPermissions: one-time warning screen needing Enter   -> stalls
+# So: auto mode, never Haiku for a session, plus --allowedTools as a safety net for
+# anything auto mode would still pause on. --allowedTools must be in =value form:
+# the space form swallows the prompt that follows it.
 # Wave sessions: --model sonnet --autocompact 600k   Lead: --model opus --autocompact 450k
 # Override with WAVE_CLAUDE_FLAGS / LEAD_CLAUDE_FLAGS.
-ALLOW="--permission-mode acceptEdits --allowedTools=Bash,Edit,Write,MultiEdit,NotebookEdit,Agent,SendMessage,EnterWorktree,ExitWorktree,WebFetch,WebSearch"
+ALLOW="--permission-mode auto --allowedTools=Bash,Edit,Write,MultiEdit,NotebookEdit,Agent,SendMessage,EnterWorktree,ExitWorktree,WebFetch,WebSearch"
 set -euo pipefail
 CHAIN=${1:?chain issue number}; FROM=${2:?first wave}; TO=${3:?last wave}
 REPO=${4:-$PWD}; GEN=${5:-}
