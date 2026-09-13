@@ -1,7 +1,7 @@
 ---
 name: grill-with-html
 description: A relentless interview to sharpen a plan or design, where wide rounds are rendered as an interactive HTML round sheet and the settled decisions land in CONTEXT.md and ADRs.
-disable-model-invocation: true
+disable-model-invocation: false
 ---
 
 # grill-with-html
