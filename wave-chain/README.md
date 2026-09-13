@@ -64,13 +64,13 @@ sequenceDiagram
     L->>G: comment "lead: <session>, branch, PR, server pid"
     W->>G: compute frontier from blockedBy edges, claim free tickets
     W->>W: up to 5 workers, one per ticket
-    W->>G: PR "wave K: …" against the chain branch
+    W->>G: PR "wave K: #12 …" against the chain branch, as soon as #12 finishes
     W->>L: wave K  #12  ready  <PR>
     L->>M: merge PR, run gates, smoke on :3000, tick checklist
     M-->>L: PR #201 · merged · gates pass · smoke pass · conflicts none
     L->>W: merged
+    W->>G: close #12 with PR link + file:line evidence (only now, never on an open PR)
     W->>W: announce to whoever was blocked on #12
-    W->>G: close #12 with PR link + file:line evidence
     W->>W: gh-audit.sh <chain#> K → AUDIT PASS
     W->>L: wave K  landed  audit: pass
     L->>G: gh-audit.sh <chain#> → AUDIT PASS
@@ -89,7 +89,7 @@ Human-gated tickets never stall a run. A wave that hits one sends `parked-human`
 
 | Layer | Who | What |
 |---|---|---|
-| Per ticket | the worker | test-first, then two reviewer subagents: one against the ticket's Done-when, one for code quality; tests are run and shown before any completion claim |
+| Per ticket | the worker | in its own worktree and branch: test-first, then two reviewer subagents, one against the ticket's Done-when and one for code quality; tests are run and shown before any completion claim; one PR per ticket the moment it finishes |
 | Per wave | the wave orchestrator | reads the verdicts, checks evidence per ticket, Opus review pass on money-moving tickets, GitHub audit for its wave |
 | Per merge | the Opus merge agent | full gates on the chain branch, then **smoke on the running dev server**: every route or behaviour a Done-when names is hit on port 3000. Fail bounces and reverts the PR. This is the only moment a change is observable in the app, since a worker's worktree is not what the server serves. |
 | End of run | the lead, through agents | final gates, one **review of the whole chain PR** posted as inline comments, blocking findings fixed on the branch, then the audit, then ready for review |

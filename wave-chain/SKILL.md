@@ -192,7 +192,7 @@ Say which tickets are blocked at launch and which are `hitl`. Do not implement a
 
 Read the chain issue, then compute - do not assume - three lists.
 
-**Your frontier.** Runnable = open · unassigned · not `hitl` · no blocker whose state is open. Plus, if you were relaunched (§L4b): open · assigned to `@me` · `in-progress` · `wave:K` - that is your own unfinished work, resume it. Use the R3 query; an empty array means go.
+**Your frontier.** Runnable = open · unassigned · not `hitl` · no blocker whose state is open. Plus, if you were relaunched (§L4b - the lead's relaunch comment on the chain issue names your wave): open · assigned to `@me` · `in-progress` · `wave:K` - that is your own unfinished work, resume it. Use the R3 query; an empty array means go.
 
 Two traps: `gh issue list --json blockedBy` returns an **object** - the edges are under `.nodes`, and `--jq` straight at the field is unreliable (`build-waves.md`) - and the list **includes already-closed blockers**, so filter on state every time. REST says `open`/`closed` lowercase; the JSON field says `OPEN`/`CLOSED`.
 
@@ -204,7 +204,9 @@ Two traps: `gh issue list --json blockedBy` returns an **object** - the edges ar
 
 Comment on the chain issue: your wave number and your session name - `wc<chain#>-wave<K>` when the launcher started you, otherwise whatever `ListAgents` shows - so other orchestrators can address you. Without this you can compute that you owe an announcement but not where to send it.
 
-Then claim **your frontier tickets only** - the ones I1 computed as runnable: `gh issue edit <n> --add-assignee @me --add-label in-progress`. A blocked ticket stays unassigned and unlabelled, so whoever clears it can see at a glance that nobody is on it. `EnterWorktree` before the first edit. When the chain issue carries a `lead:` comment, base your worktree on `origin/wave-chain/<chain#>` from that comment, not on `main`.
+Then claim **your frontier tickets only** - the ones I1 computed as runnable: `gh issue edit <n> --add-assignee @me --add-label in-progress`. A blocked ticket stays unassigned and unlabelled, so whoever clears it can see at a glance that nobody is on it.
+
+**Isolation is per ticket, not per wave.** Five workers editing one tree at once cannot each have a branch, and one branch for five tickets means the first ticket's blocker only releases when the fifth is done. So every worker is dispatched with `isolation: "worktree"`, branched from `origin/wave-chain/<chain#>` when the chain issue carries a `lead:` comment, from `main` otherwise, and the orchestrator edits nothing in the shared tree. The one exception is a serialized file: the worker hands the change up, and the orchestrator applies it in its own worktree (`EnterWorktree`, same base) as its own small PR.
 
 ## I3. Run the free tickets
 
@@ -212,6 +214,8 @@ Then claim **your frontier tickets only** - the ones I1 computed as runnable: `g
 
 **Worker model, per ticket:** `sonnet` by default. `opus` for any ticket that moves money, touches a serialized file, or carries a `## Options` section the orchestrator had to decide - those are the ones where a cheaper worker's mistake costs more than the model. Never `haiku` for a worker.
 **REQUIRED SUB-SKILL:** `superpowers:verification-before-completion` before any completion claim.
+
+**One PR per ticket, the moment that ticket's worker finishes** - not one wave PR at close-out. The worker commits on its branch, pushes, and opens the PR titled `wave K: #<n> <what>` (the audit finds your PRs by the `wave K:` prefix); with a lead the base is `wave-chain/<chain#>`, else `main`. Then you send the lead a `ready` line (§I6) and move on to the next queued ticket. A blocker that ships in the first hour is released in the first hour; batching it into a wave PR at the end holds every waiter for the whole wave.
 
 Deferred tickets stay untouched and unassigned. Do not "just start" a blocked one.
 
@@ -229,7 +233,7 @@ Comment the item on the chain issue, then let §H carry it.
 
 ## I6. Report parked, do not go quiet
 
-When only blocked tickets remain, report - which tickets, which wave, and **which kind of wait**: agent-gated ("Wave 1 is finishing #24, landing soon") or human-gated ("needs Kourosh, no ETA"). On a human-gated wait, stop holding and report. A silent session is indistinguishable from a dead one. With a lead, a human-gated wait also means you are finished: the owner is away and answers when he is back, so send the `parked-human` line, leave the ticket open and unassigned, do your I7 close-out for everything that did land, and exit. The lead lists it in the final summary as waiting on him; nobody idles in a tab for hours over it.
+A ticket you park gets a one-line comment saying so and on what - `parked: waits on #24 (wave 1)` or `parked: needs Kourosh, #140` - the moment you park it; the audit fails an open ticket nobody has explained. When only blocked tickets remain, report - which tickets, which wave, and **which kind of wait**: agent-gated ("Wave 1 is finishing #24, landing soon") or human-gated ("needs Kourosh, no ETA"). On a human-gated wait, stop holding and report. A silent session is indistinguishable from a dead one. With a lead, a human-gated wait also means you are finished: the owner is away and answers when he is back, so send the `parked-human` line, leave the ticket open and unassigned, do your I7 close-out for everything that did land, and exit. The lead lists it in the final summary as waiting on him; nobody idles in a tab for hours over it.
 
 **Where the report goes depends on one observable fact.** If the chain issue carries a `lead:` registration comment (§L2), you were launched by a lead: `SendMessage` the report to the session named in the **latest** such comment - re-read it before every message, leads hand over (§L7) - and write nothing for the owner - he is not reading your tab. If there is no `lead:` comment, you were opened by hand and the owner is your reader: tell him in chat. The same routing applies to every I7 close-out summary and every §I5 `hitl` item.
 
@@ -244,8 +248,8 @@ Anything longer - a log, a diff, a stack trace, a paragraph - goes as a comment 
 
 ## I7. Close out on GitHub - this is the job, not the epilogue
 
-1. Commit, push, open the PR titled `wave K: <what>` - the audit finds your PR by that prefix. With a lead, `gh pr create --base wave-chain/<chain#>` - never against `main` - then `SendMessage` the lead a `ready` line in the §I6 shape, and keep running your other tickets while you wait for its merge confirmation - only the announcement waits, not you. Without a lead, target `main` as before. Never push to `master`, never force-push.
-2. Per ticket: comment with what changed, the PR link, and **evidence per Done-when line**; `--remove-label in-progress`; close it *only* if Done-when actually passed. One that did not land stays open with a comment saying why.
+1. Every ticket's PR is already open (I3). Never push to `master`, never force-push.
+2. Per ticket, **after** its PR is in: with a lead, that means the lead's merge confirmation for that PR - a ticket closed on an open PR is closed on code that may still bounce, and the audit will read it as done. Without a lead, after your own gates pass on the PR. Then comment what changed, the PR link, and **evidence per Done-when line**; `--remove-label in-progress`; close it *only* if Done-when actually passed. One that bounced or did not land stays open, `in-progress` removed, with a comment saying why.
 3. Comment on the chain issue: what landed, what did not, the PR, any serialized file you touched.
 4. Re-run your frontier - and send the §I4 announcements.
 5. **Audit before you say landed.** Run `~/.claude/skills/wave-chain/scripts/gh-audit.sh <chain#> <K>`. Every `FAIL` line names a ticket or PR whose GitHub state does not match a finished wave: fix it on GitHub and rerun until it prints `AUDIT PASS`. Only then send the `landed` line, and that line carries the words `audit: pass`. A `landed` line without them is a lie the lead will catch at L6, when it is expensive.
@@ -441,7 +445,10 @@ From `build-waves.md`, the rules that bite: serialized files (`proxy.ts`, `app/l
 - "I'm done, I'll kill the dev server" → you did not start it, or someone else is still on it. Leave it up.
 - "Port 3000 is empty, I'll start the server" (in a wave, with a lead) → you never start one. Message the lead; it started one and it is down.
 - "I'll pick up a ticket from another wave" → you own one wave. Announce and hand over.
-- "I'll close the tickets after the PR merges" → close them now. Nobody else will.
+- "I'll close the tickets after the PR merges" (no lead) → close them now. Nobody else will.
+- "PR is open, I'll close the ticket" (with a lead) → the PR can still bounce. Close on the lead's merge confirmation.
+- "One PR for my whole wave, it's tidier" → one per ticket, as each finishes. A wave PR holds every waiter until your last ticket.
+- "Five workers, one worktree" → five branches need five worktrees. `isolation: "worktree"` per worker.
 - "I'll run the other waves as subagents" → they need worktrees, budgets, and names. Sibling sessions, via the launcher.
 - "wezterm cli failed, I'll open Terminal.app" → no. Report it and stop. WezTerm tab or nothing.
 - "The owner can read the wave tabs himself" → he opened one session on purpose. Every report routes through the lead.
