@@ -170,11 +170,10 @@ One chain issue only - check `gh issue list --label orchestrator --state open` f
 Answer how many waves there are, then print the one way the owner should start it:
 
 ```
-claude --name wc<chain#>-lead --autocompact 450k
-/wave-chain --implement
+wave-chain
 ```
 
-and, for running a single wave by hand, one line per wave:
+That is the `scripts/start-lead.sh` alias: it finds the open chain issue, names the session `wc<chain#>-lead`, sets the 450k window and Opus, and runs `--implement`. Without the alias, the long form is `claude --name wc<chain#>-lead --autocompact 450k` then `/wave-chain --implement`. For running a single wave by hand, one line per wave:
 
 ```
 GH Issue #<chain#>, Wave 1

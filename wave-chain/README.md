@@ -2,14 +2,13 @@
 
 A Claude Code skill that runs **many orchestrator sessions at once** over one GitHub backlog, one wave each, and hands you back **one PR**.
 
-You open one WezTerm tab and type:
+You open one WezTerm tab in the repo and type:
 
 ```
-claude --name wc148-lead --autocompact 450k
-/wave-chain --implement
+wave-chain
 ```
 
-(`148` being your chain issue number; `--modify` prints the exact line.)
+That is a shell alias for `scripts/start-lead.sh`, which finds the open chain issue, names the session, caps its context, and starts the lead. Long form, if you'd rather not alias it: `claude --name wc<chain#>-lead --autocompact 450k`, then `/wave-chain --implement`.
 
 Then you leave. When you come back, every ticket that did not need you is closed with its evidence on the issue, every wave's PR is merged into one chain branch, and one PR from that branch is waiting for your preview. The tickets that needed a decision from you are listed in that PR under *Waiting on you*, and collected into a single decisions sheet.
 
@@ -184,6 +183,7 @@ gh api -X POST repos/OWNER/REPO/issues/51/dependencies/blocked_by -F issue_id=$B
 | Path | What |
 |---|---|
 | `SKILL.md` | The protocol. Modes §R, §M, §L, §I, §H, §D, plus the red-flags list. |
+| `scripts/start-lead.sh` | Starts the lead in the current tab, named and capped. Alias it to `wave-chain`. |
 | `scripts/launch-waves.sh` | Opens one WezTerm tab per wave, or a successor lead, each its own Claude session with the right model and context window. |
 | `scripts/gh-audit.sh` | Verifies GitHub reflects the run. Exit 1 on any `FAIL`. |
 | `references/chain-issue.md` | Template for the chain issue. |
@@ -197,4 +197,5 @@ The protocol is generic. The `## Project conventions` section of `SKILL.md` is n
 - [`superpowers`](https://github.com/obra/superpowers): `subagent-driven-development` fans a wave out, `verification-before-completion` gates the completion claims.
 - [WezTerm](https://wezfurlong.org/wezterm/) with `wezterm cli` on the path, for lead mode.
 - `gh` and `jq`.
+- Optional: `alias wave-chain="$HOME/.claude/skills/wave-chain/scripts/start-lead.sh"` in your shell rc, so starting a run is one word.
 - Sessions address each other with `SendMessage` / `ListAgents`, so orchestrators must be able to see each other as peers.
