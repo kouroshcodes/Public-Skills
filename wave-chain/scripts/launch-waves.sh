@@ -17,14 +17,18 @@ REPO=${4:-$PWD}; GEN=${5:-}
 SCRUB="unset \$(env | grep -o '^CLAUDE[A-Z0-9_]*' | tr '\n' ' ') 2>/dev/null;"
 command -v wezterm >/dev/null || { echo "wezterm not on PATH" >&2; exit 1; }
 wezterm cli list >/dev/null 2>&1 || { echo "not inside a WezTerm session - refusing to fall back to another terminal" >&2; exit 1; }
+# Spawn into the window this script runs in - without --window-id wezterm opens a NEW window.
+WIN=$(wezterm cli list --format json | jq -r --arg p "${WEZTERM_PANE:-x}" '.[] | select((.pane_id|tostring)==$p) | .window_id' | head -1)
+[ -n "$WIN" ] || WIN=$(wezterm cli list --format json | jq -r '.[0].window_id')
+SPAWN="wezterm cli spawn --window-id $WIN --cwd $REPO"
 if [ "$FROM" = lead ]; then
-  pane=$(wezterm cli spawn --cwd "$REPO" -- zsh -lc \
+  pane=$($SPAWN -- zsh -lc \
     "$SCRUB exec claude --name wc$CHAIN-lead${GEN:+-$GEN} ${LEAD_CLAUDE_FLAGS:---permission-mode auto --model opus --autocompact 450k} '/wave-chain --implement'")
   wezterm cli set-tab-title --pane-id "$pane" "wc$CHAIN-lead${GEN:+-$GEN}" >/dev/null 2>&1 || true
   echo "lead wc$CHAIN-lead${GEN:+-$GEN} -> wezterm pane $pane"; exit 0
 fi
 for k in $(seq "$FROM" "$TO"); do
-  pane=$(wezterm cli spawn --cwd "$REPO" -- zsh -lc \
+  pane=$($SPAWN -- zsh -lc \
     "$SCRUB exec claude --name wc$CHAIN-wave$k ${WAVE_CLAUDE_FLAGS:---permission-mode auto --model sonnet --autocompact 600k} '/wave-chain --implement $k'")
   wezterm cli set-tab-title --pane-id "$pane" "wc$CHAIN-wave$k" >/dev/null 2>&1 || true
   echo "wave $k wc$CHAIN-wave$k -> wezterm pane $pane"
