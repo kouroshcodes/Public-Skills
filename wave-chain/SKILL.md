@@ -287,7 +287,7 @@ Then stop. The word is `confirm`, in chat. Anything else is a change request: ap
 
 ## L1. Branch, count, launch
 
-Three checks before anything, each a stop-and-report if it fails: there is exactly one open `orchestrator` issue with `wave:*` labels on tickets (otherwise the owner runs `--modify` first); `git status --porcelain` is empty in the repo root (the chain branch is cut from this checkout, and a dirty tree would carry the owner's uncommitted work onto it); `wezterm cli list` answers.
+Three checks before anything, each a stop-and-report if it fails: there is exactly one open `orchestrator` issue with `wave:*` labels on tickets (otherwise the owner runs `--modify` first); `git status --porcelain` is empty in the repo root (the chain branch is cut from this checkout, and a dirty tree would carry the owner's uncommitted work onto it); `wezterm cli list` answers; and you are running in that repo yourself - Claude Code asks "do you trust this folder?" the first time it opens in a directory, and a wave tab launched into an untrusted folder sits on that prompt with nobody to answer it. You being here past that prompt is the proof.
 
 Cut the chain branch, from the default branch, and push it:
 
