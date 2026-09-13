@@ -29,6 +29,8 @@ If the project has a build/orchestration protocol doc (here, `docs/agents/build-
 
 **`--read` writes nothing.** Not an issue, not a label, not a comment, not an edge, not a close. A stale ticket that obviously shipped is still only a *recommendation* in `--read`. The default has to be safe to run by accident, or it stops being the default.
 
+**Nothing starts without the word.** `--modify` waits for the owner's go before the first label; the lead (§L0) waits for `confirm` before the first tab. Both print what they are about to do in plain words first. A run the owner did not confirm is a run he did not want.
+
 **GitHub is the deliverable.** The owner comes back and opens GitHub, not the chat. A ticket closed with its evidence comment, a PR whose body says what it contains, a chain PR ready for review - that is the work. A chat summary is a copy of what is already on GitHub, never a substitute for it, and "see the PR for details" is only ever written after the details are in the PR. Whether GitHub is right is not a judgement: `scripts/gh-audit.sh` checks the state of every wave ticket and PR, and nothing is `landed` while it prints a `FAIL` line. Its output is the close-out; the agent's memory of having closed things is not.
 
 **Code is the only evidence.** Never a doc, never a state tracker, never a handoff file, never memory, never what a previous session reported. `BUILD_STATE.md` says a feature shipped and the repo says otherwise: the repo is right. Every verdict carries `file:line`, or it is not a verdict.
@@ -254,6 +256,31 @@ Anything longer - a log, a diff, a stack trace, a paragraph - goes as a comment 
 
 The owner opens one session - on Opus - and talks to one session. The lead is a manager, not a wave: it launches, relays, merges, and finishes last. It runs no tickets and reads no diffs. Its context has to survive a run of many hours, so every rule below is about keeping it small.
 
+## L0. Brief the owner, then wait for the word
+
+Nothing happens before this - no branch, no server, no tab. Read the chain issue and every open ticket it lists, and print a brief the owner can read in a minute, written for someone who has not opened a ticket in weeks:
+
+```
+Wave chain #148 - 23 tickets, 4 waves, 3 waiting on you
+
+Wave 1 (7)
+  #112  Show the account balance on the dashboard instead of only in settings
+  #117  Let a user download last month's statement as a PDF
+  ...
+Wave 2 (9)   - starts once wave 1 tickets it needs have landed
+  #131  Send an email when a deposit arrives
+  ...
+Waiting on you (3) - skipped this run, listed in the PR at the end
+  #140  Which bank goes first? (needs your pick)
+
+Then: one branch, one draft PR, one dev server, 3 tabs at a time, and I report here.
+Say "confirm" to start, or tell me what to change.
+```
+
+The rules for those lines: one line per ticket, plain words, what the user of the app gets - never the mechanism. "Let a user download the statement" not "add a PDF export endpoint"; "fix the page that goes blank on refresh" not "hydration mismatch". No file names, no table names, no library names, no acronyms. If a ticket cannot be said in one plain sentence, that is a fact about the ticket worth reporting - say so under it in a second line. Do not re-verify tickets against the code here; that was `--modify`'s job and it is expensive - this is a reading, not an audit.
+
+Then stop. The word is `confirm`, in chat. Anything else is a change request: apply it to the brief (never to GitHub - a wave move or a dropped ticket is `--modify`'s to write), print it again, and wait again. Silence is not the word.
+
 ## L1. Branch, count, launch
 
 Three checks before anything, each a stop-and-report if it fails: there is exactly one open `orchestrator` issue with `wave:*` labels on tickets (otherwise the owner runs `--modify` first); `git status --porcelain` is empty in the repo root (the chain branch is cut from this checkout, and a dirty tree would carry the owner's uncommitted work onto it); `wezterm cli list` answers.
@@ -403,6 +430,8 @@ From `build-waves.md`, the rules that bite: serialized files (`proxy.ts`, `app/l
 - "The blocker's agent said it's done" → verify the edge before starting.
 - "The docs say this one shipped" → docs are not evidence. `file:line` or it stays open.
 - "This one is obviously dead, I'll close it while reading" → `--read` writes nothing. Recommend it; `--modify` closes it.
+- "He typed wave-chain, that's the confirm" → it is the request for the brief. The word is `confirm`, after the brief.
+- "The brief is long, I'll describe the waves not the tickets" → one line per ticket. He is deciding what runs.
 - "I'll write the labels, he'll say if the cut is wrong" → the cut is confirmed before the first write, not after the fiftieth.
 - "I'll tell him about the hitl ticket when I reach it" → too late. Claim time.
 - "I'll write my own decisions sheet" → one sheet, one owner, lowest live wave.

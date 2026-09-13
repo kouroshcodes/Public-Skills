@@ -8,7 +8,9 @@ You open one WezTerm tab in the repo and type:
 wave-chain
 ```
 
-That is a shell alias for `scripts/start-lead.sh`, which finds the open chain issue, names the session, caps its context, and starts the lead. Long form, if you'd rather not alias it: `claude --name wc<chain#>-lead --autocompact 450k`, then `/wave-chain --implement`.
+That is a shell alias for `scripts/start-lead.sh`, which finds the open chain issue, names the session, caps its context, and starts the lead.
+
+The lead does not start anything yet. It prints a brief first: every ticket as one plain-words line, grouped by wave, plus the ones it will skip because they need you. You read it, say `confirm`, and then the run begins. Say anything else and it adjusts the brief and asks again. Long form, if you'd rather not alias it: `claude --name wc<chain#>-lead --autocompact 450k`, then `/wave-chain --implement`.
 
 Then you leave. When you come back, every ticket that did not need you is closed with its evidence on the issue, every wave's PR is merged into one chain branch, and one PR from that branch is waiting for your preview. The tickets that needed a decision from you are listed in that PR under *Waiting on you*, and collected into a single decisions sheet.
 
@@ -53,7 +55,9 @@ sequenceDiagram
     participant M as Merge agent (Opus)
     participant G as GitHub
 
-    K->>L: /wave-chain --implement
+    K->>L: wave-chain
+    L->>K: brief: one plain line per ticket, per wave
+    K->>L: confirm
     L->>G: chain branch + draft PR with ticket checklist
     L->>L: start the one dev server on :3000
     L->>W: launch-waves.sh (one WezTerm tab per wave)
