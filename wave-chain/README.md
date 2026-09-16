@@ -8,7 +8,7 @@ You open one WezTerm tab in the repo and type:
 wave-chain
 ```
 
-That is a shell alias for `scripts/start-lead.sh`, which finds the open chain issue, names the session, caps its context, and starts the lead.
+That is a shell alias for `scripts/start-lead.sh`, which finds the open chain issue, names the session, caps its context, and starts the lead. On Windows it is a PowerShell function instead of an alias — same three steps, see [Requires](#requires).
 
 The lead does not start anything yet. It prints a brief first: every ticket as one plain-words line, grouped by wave, plus the ones it will skip because they need you. You read it, say `confirm`, and then the run begins. Say anything else and it adjusts the brief and asks again. Long form, if you'd rather not alias it: `claude --name wc<chain#>-lead --autocompact 450k`, then `/wave-chain --implement`.
 
@@ -159,7 +159,7 @@ Everything runs on one laptop, so these are ceilings, not targets:
 - **Five workers per wave, three waves live at once.** Fifteen agents is the machine's limit.
 - **Context windows below the model's.** Wave tabs compact at 600K, leads at 450K. The smart part of a session is its first few hundred thousand tokens; the launcher sets both.
 - **One dev server**, on port 3000, started by the lead before any wave exists and stopped by the lead after the last one finishes. A wave never starts or kills one.
-- **WezTerm tabs only.** The launcher refuses to run outside WezTerm rather than fall back to another terminal.
+- **WezTerm tabs only.** The launcher refuses to run outside WezTerm rather than fall back to another terminal. Inside each tab it hosts the session in `zsh` where there is one and PowerShell where there is not, so a wave tab starts on Windows too.
 
 Both numbers live in the `## Shared machine` section of `SKILL.md`. Raise them for your hardware, but keep the shape.
 
@@ -188,7 +188,7 @@ gh api -X POST repos/OWNER/REPO/issues/51/dependencies/blocked_by -F issue_id=$B
 |---|---|
 | `SKILL.md` | The protocol. Modes §R, §M, §L, §I, §H, §D, plus the red-flags list. |
 | `scripts/start-lead.sh` | Starts the lead in the current tab, named and capped. Alias it to `wave-chain`. |
-| `scripts/launch-waves.sh` | Opens one WezTerm tab per wave, or a successor lead, each its own Claude session with the right model and context window. |
+| `scripts/launch-waves.sh` | Opens one WezTerm tab per wave, or a successor lead, each its own Claude session with the right model and context window. Hosts the tab in `zsh`, or PowerShell on Windows. |
 | `scripts/gh-audit.sh` | Verifies GitHub reflects the run. Exit 1 on any `FAIL`. |
 | `references/chain-issue.md` | Template for the chain issue. |
 
@@ -201,5 +201,25 @@ The protocol is generic. The `## Project conventions` section of `SKILL.md` is n
 - [`superpowers`](https://github.com/obra/superpowers): `subagent-driven-development` fans a wave out, `verification-before-completion` gates the completion claims.
 - [WezTerm](https://wezfurlong.org/wezterm/) with `wezterm cli` on the path, for lead mode.
 - `gh` and `jq`.
-- Optional: `alias wave-chain="$HOME/.claude/skills/wave-chain/scripts/start-lead.sh"` in your shell rc, so starting a run is one word.
+- Optional, so starting a run is one word. On macOS and Linux, in your shell rc:
+
+  ```sh
+  alias wave-chain="$HOME/.claude/skills/wave-chain/scripts/start-lead.sh"
+  ```
+
+  On Windows there is no `zsh` to run `start-lead.sh`, so put the same three steps in your PowerShell profile (`$PROFILE`) instead:
+
+  ```powershell
+  function wave-chain {
+      $chain = gh issue list --label orchestrator --state open --limit 1 --json number --jq '.[0].number // empty'
+      if (-not $chain) {
+          Write-Error 'wave-chain: no open chain issue (label: orchestrator) - run /wave-chain --modify first'
+          return
+      }
+      $chain = "$chain".Trim()
+      claude --name "wc$chain-lead" --permission-mode auto `
+        --allowedTools=Bash,Edit,Write,MultiEdit,NotebookEdit,Agent,SendMessage,EnterWorktree,ExitWorktree,WebFetch,WebSearch `
+        --model opus --autocompact 450k '/wave-chain --implement'
+  }
+  ```
 - Sessions address each other with `SendMessage` / `ListAgents`, so orchestrators must be able to see each other as peers.
