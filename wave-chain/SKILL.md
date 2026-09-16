@@ -44,7 +44,7 @@ Every wave runs on one laptop. These are hard caps on what runs **at the same ti
 **One dev server, shared by every session.** Never start a second. With a lead (§L), the lead starts it before any wave exists and is the only session that stops it; a wave never starts one and never kills one, whatever port 3000 says. Without a lead, before you start anything:
 
 ```bash
-lsof -ti:3000
+~/.claude/skills/wave-chain/scripts/devserver.sh pid
 ```
 
 A PID means the shared server is already up - use it, and it makes no difference which wave started it. Start one only when nothing answers. While any other session is live, never kill it, whoever started it: another wave is probably mid-verification on it. A second `next dev` on port 3001 is not a workaround, it is the same RAM and a second set of file watchers on the same tree.
@@ -52,10 +52,12 @@ A PID means the shared server is already up - use it, and it makes no difference
 **Last session out reaps it - without a lead only.** With a lead, §L6 reaps and you never touch it. Otherwise, closing out your wave, check `ListAgents`. No other orchestrator still running means you are the last one, so kill the shared server before you finish, whoever started it:
 
 ```bash
-lsof -ti:3000 | xargs kill
+~/.claude/skills/wave-chain/scripts/devserver.sh reap
 ```
 
 Any peer still live and you leave it up. This is the only deliberate kill, and it is what keeps the shared server from outliving the whole chain: nobody else's close-out will reap it, and a server left up for hours is the one that silently misses a route file added after it booted.
+
+`devserver.sh` answers all three questions - is one up, start one, reap it - because `lsof` does not exist on Windows. A session there that shells out to `lsof` directly gets an empty answer, concludes port 3000 is free, and starts the second dev server this whole section exists to prevent. The script uses `lsof` where it exists and `netstat` where it does not, and prints the same PID either way. `WAVE_DEV_PORT` overrides the port.
 
 **Context windows are capped below the model's.** A session that runs to 967K tokens before compaction has spent most of that on a lossy tail; the smart part of a session is its first few hundred thousand tokens. So: wave tabs run with `--autocompact 600k` (the launcher sets it), the lead with `--autocompact 450k` (the owner starts it that way, see M7; a successor lead is launched that way by §L7). A wave that compacts finishes its wave on the summary plus GitHub; a lead that compacts hands over (§L7).
 
@@ -298,7 +300,7 @@ git fetch origin && git switch -c wave-chain/<chain#> origin/main && git push -u
 Start the shared dev server now, from your checkout of the chain branch, before a single wave exists - two tabs that both find port 3000 empty will both start one, and that race is only closed by starting it first:
 
 ```bash
-lsof -ti:3000 || (npm run dev >/dev/null 2>&1 &) ; sleep 5; lsof -ti:3000
+~/.claude/skills/wave-chain/scripts/devserver.sh start <repo-dir>
 ```
 
 A PID means it is up. It serves the chain branch, so every merge in L4 is live on it without a restart. Put the PID in your L2 comment.
@@ -385,7 +387,7 @@ A finished wave does not exit on its own - an interactive session sits at its pr
 4. Fill the `## Waiting on Kourosh` section of the chain PR body with every `parked-human` ticket and its one-line reason.
 5. **If that section is not empty, build the §H decisions sheet now**, as part of this close-out, with every open `hitl` item on it - the owner answers it in one sitting and re-runs `--implement`; the next lead finds the answers in the inbox file.
 
-Then mark the chain PR ready for review with a body that lists every ticket it closes and every wave PR it absorbed, kill the dev server you started (`lsof -ti:3000 | xargs kill`) - you are the only session allowed to, and this is the only moment, and give the owner one final summary that is built from the audit output and the chain PR, not from memory: per wave, tickets closed and not, elapsed time since the L2 comment, the one PR link with its preview deployment URL if the PR checks expose one, and the path of the decisions sheet if one was built. Every line in that summary points at something already on GitHub. **Never merge the chain PR.** Merging into `main` is the owner's click, after his preview.
+Then mark the chain PR ready for review with a body that lists every ticket it closes and every wave PR it absorbed, kill the dev server you started (`scripts/devserver.sh reap`) - you are the only session allowed to, and this is the only moment, and give the owner one final summary that is built from the audit output and the chain PR, not from memory: per wave, tickets closed and not, elapsed time since the L2 comment, the one PR link with its preview deployment URL if the PR checks expose one, and the path of the decisions sheet if one was built. Every line in that summary points at something already on GitHub. **Never merge the chain PR.** Merging into `main` is the owner's click, after his preview.
 
 ## L7. Hand over before you get dumb
 
