@@ -1,7 +1,7 @@
 ---
 name: wave-chain
 description: 'Use when GitHub issues must be handed to several orchestrator sessions at once, one wave each, running in parallel and unblocking each other by message. Triggers on "GH Issue #N, Wave K", on asking how many waves there are, on auditing whether open issues are still real work, on a ticket that must wait for another session''s ticket to land, on a hitl ticket that is stalling someone else''s work, and on a new issue opened after the chain was already built. [kourosh]'
-argument-hint: "--read (default) | --modify | --implement (lead) | --implement K | --human | --add <issue#>"
+argument-hint: "--read (default) | --modify | --implement (lead) | --implement K | --human | --add <issue#>   [--chain N]"
 metadata:
   author: kourosh
 ---
@@ -12,22 +12,35 @@ N orchestrators, one per wave, all pointed at one chain issue, as many running a
 
 **Release is a push.** The orchestrator that closes a blocker messages whoever was waiting. Nobody polls.
 
-If the project has a build/orchestration protocol doc (here, `docs/agents/build-waves.md`), it is the authority on how a single wave is run. This skill is the protocol *between* orchestrators. Where they disagree, that doc wins.
+If the project has a build/orchestration protocol doc (here, `docs/agents/build-waves.md`), it is the authority on how a single wave is run. This skill is the protocol _between_ orchestrators. Where they disagree, that doc wins.
+
+## Several chains
+
+A repo can hold several chains at once - one for a feature track, one for a cleanup backlog. Each chain is one `orchestrator` issue plus a label that names it.
+
+- **Membership is a label.** A chain owns the label `chain:<chain#>` (its chain issue's number). The chain issue and every ticket in it carry that label, and a ticket is in exactly one chain. Never put a ticket in two.
+- **Wave numbers are per chain.** Every chain starts at wave 1. `wave:K` alone means nothing across chains; every query that picks a wave's tickets filters on **both** `chain:<chain#>` and `wave:K`, and every frontier, relaunch and audit in this skill is read that way.
+- **Legacy chain.** A chain cut before this rule has no `chain:*` label on its tickets. Its tickets are the `wave:*` tickets that carry no `chain:*` label at all. Only one legacy chain can exist; every chain cut after it is labelled.
+- **Which chain am I in.** In order: `--chain N`; "GH Issue #N" in the invocation; otherwise, if exactly one `orchestrator` issue is open, that one. Two or more open and none named: `--read` reports each chain separately; every other mode lists the open chains and asks which, and writes nothing until told.
+- **New chain or extend one.** `--modify` appends to an existing open chain when the work belongs to it and the owner has not asked otherwise. It cuts a new chain when the owner asks for one, or when the work is a separate track (its tickets share no edges with the open chain's).
+- **One lead per repo at a time.** A lead runs its dev server from the repo-root checkout on its own chain branch, so two leads in one repo would fight over that checkout and port 3000. Several chains can be planned, read and run by hand wave by wave; only one of them has a live lead. The Shared machine caps below count waves across every chain on the laptop, not per chain.
 
 ## Modes
 
-| Argument | Mode |
-|---|---|
-| none, or `--read` | **§R** - audit and report. Writes nothing. |
-| `--modify` | **§M** - apply the plan to GitHub. Issues only, no code. |
-| `--implement` with no number | **§L** - lead: launch every wave in its own WezTerm tab, merge their PRs into one chain branch, and be the only session that talks to the owner |
-| `--implement K`, or "GH Issue #N, Wave K" | **§I** - run wave K |
-| `--human` | **§H** - own the decisions sheet, clear the `hitl` blockers |
-| `--add <issue#>` | **§D** - graft a new issue into a chain that is already running |
+| Argument                                  | Mode                                                                                                                                            |
+| ----------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| none, or `--read`                         | **§R** - audit and report. Writes nothing.                                                                                                      |
+| `--modify`                                | **§M** - apply the plan to GitHub. Issues only, no code.                                                                                        |
+| `--implement` with no number              | **§L** - lead: launch every wave in its own WezTerm tab, merge their PRs into one chain branch, and be the only session that talks to the owner |
+| `--implement K`, or "GH Issue #N, Wave K" | **§I** - run wave K                                                                                                                             |
+| `--human`                                 | **§H** - own the decisions sheet, clear the `hitl` blockers                                                                                     |
+| `--add <issue#>`                          | **§D** - graft a new issue into a chain that is already running                                                                                 |
+
+Every mode takes `--chain N` to name the chain it acts on (see Several chains). Without it the mode resolves the chain itself, and asks when more than one is open.
 
 ## Two invariants, every mode
 
-**`--read` writes nothing.** Not an issue, not a label, not a comment, not an edge, not a close. A stale ticket that obviously shipped is still only a *recommendation* in `--read`. The default has to be safe to run by accident, or it stops being the default.
+**`--read` writes nothing.** Not an issue, not a label, not a comment, not an edge, not a close. A stale ticket that obviously shipped is still only a _recommendation_ in `--read`. The default has to be safe to run by accident, or it stops being the default.
 
 **Nothing starts without the word.** `--modify` waits for the owner's go before the first label; the lead (§L0) waits for `confirm` before the first tab. Both print what they are about to do in plain words first. A run the owner did not confirm is a run he did not want.
 
@@ -89,7 +102,7 @@ These numbers are this machine's, like `## Project conventions` below. Change th
 gh issue list --state open --limit 300 --json number,title,labels,url,body
 ```
 
-Never restate a ticket from memory. If `wave:*` labels exist they **are** the plan - group by them, do not re-cut. Only unlabelled tickets need placing.
+Never restate a ticket from memory. If `wave:*` labels exist they **are** the plan - group by them per chain (`chain:*` label, or the legacy rule in Several chains), do not re-cut. Only tickets in no chain need placing.
 
 ## R2. Verify every ticket against the codebase
 
@@ -97,11 +110,11 @@ An issue tracker drifts. Tickets get fixed by an unrelated PR, get superseded, o
 
 So every open ticket is read against the actual code and gets one of three verdicts:
 
-| Verdict | Meaning | Required evidence |
-|---|---|---|
-| `SHIPPED` | Every `## Done when` line is already true in the repo | `file:line` per Done-when line |
-| `PARTIAL` | Some Done-when lines pass, some do not | what passes, with `file:line`, and what is left |
-| `OPEN` | Real work, or you cannot settle it either way from the code | the grep that found nothing |
+| Verdict   | Meaning                                                     | Required evidence                               |
+| --------- | ----------------------------------------------------------- | ----------------------------------------------- |
+| `SHIPPED` | Every `## Done when` line is already true in the repo       | `file:line` per Done-when line                  |
+| `PARTIAL` | Some Done-when lines pass, some do not                      | what passes, with `file:line`, and what is left |
+| `OPEN`    | Real work, or you cannot settle it either way from the code | the grep that found nothing                     |
 
 **Undeterminable is `OPEN`.** A ticket you cannot prove shipped is never `SHIPPED`. Re-running a done ticket costs an hour; dropping a live one leaves a hole nobody is looking for.
 
@@ -164,7 +177,7 @@ Per `SHIPPED` ticket: comment the evidence (`file:line` per Done-when line), the
 
 ## M4. Label the waves
 
-`gh issue edit <n> --add-label wave:K` across the survivors.
+`gh issue edit <n> --add-label wave:K --add-label chain:<chain#>` across the survivors. For a new chain, create the chain issue first (M6) so its number exists, then `gh label create chain:<chain#>` and label its tickets.
 
 ## M5. Make every dependency a real edge
 
@@ -183,7 +196,7 @@ Fill [`references/chain-issue.md`](references/chain-issue.md), then:
 gh issue create --title "Wave chain - <YYYY-MM-DD>" --label orchestrator --body-file <path>
 ```
 
-One chain issue only - check `gh issue list --label orchestrator --state open` first and edit rather than open a second. Two chain issues means two truths.
+Label the chain issue itself `chain:<chain#>` too. Check `gh issue list --label orchestrator --state open` first: extending a chain means editing its issue, never opening a second issue for the same chain - two issues for one chain means two truths. A **separate** chain (Several chains) gets its own issue, its own `chain:<#>` label, and wave numbers from 1; say in its body which other chains are open and that their waves are not this chain's.
 
 ## M7. Hand it over
 
@@ -193,7 +206,7 @@ Answer how many waves there are, then print the one way the owner should start i
 wave-chain
 ```
 
-That is the `scripts/start-lead.sh` alias: it finds the open chain issue, names the session `wc<chain#>-lead`, sets the 450k window and Opus, and runs `--implement`. Without the alias, the long form is `claude --name wc<chain#>-lead --autocompact 450k` then `/wave-chain --implement`. For running a single wave by hand, one line per wave:
+That is the `scripts/start-lead.sh` alias: it finds the open chain issue (or takes its number, `wave-chain <chain#>`, and refuses to guess when several are open), names the session `wc<chain#>-lead`, sets the 450k window and Opus, and runs `--implement --chain <chain#>`. With several chains open, always print the numbered form. Without the alias, the long form is `claude --name wc<chain#>-lead --autocompact 450k` then `/wave-chain --implement --chain <chain#>`. For running a single wave by hand, one line per wave:
 
 ```
 GH Issue #<chain#>, Wave 1
@@ -210,13 +223,13 @@ Say which tickets are blocked at launch and which are `hitl`. Do not implement a
 
 Read the chain issue, then compute - do not assume - three lists.
 
-**Your frontier.** Runnable = open · unassigned · not `hitl` · no blocker whose state is open. Plus, if you were relaunched (§L4b - the lead's relaunch comment on the chain issue names your wave): open · assigned to `@me` · `in-progress` · `wave:K` - that is your own unfinished work, resume it. Use the R3 query; an empty array means go.
+**Your frontier.** Your tickets are `chain:<chain#>` · `wave:K` (a legacy chain: `wave:K` with no `chain:*` label). Runnable = open · unassigned · not `hitl` · no blocker whose state is open. Plus, if you were relaunched (§L4b - the lead's relaunch comment on the chain issue names your wave): open · assigned to `@me` · `in-progress` · your chain · `wave:K` - that is your own unfinished work, resume it. Use the R3 query; an empty array means go. A `wave:K` ticket from another chain is never yours, however free it looks.
 
 Two traps: `gh issue list --json blockedBy` returns an **object** - the edges are under `.nodes`, and `--jq` straight at the field is unreliable (`build-waves.md`) - and the list **includes already-closed blockers**, so filter on state every time. REST says `open`/`closed` lowercase; the JSON field says `OPEN`/`CLOSED`.
 
 **Who waits on you.** Which of your tickets block someone else's. This is the read people skip, and it is what makes the mesh work for N sessions instead of two: you cannot announce a release you never knew you owed.
 
-**Your flow-breaking `hitl`.** A `hitl` ticket matters *now* only if something's `blockedBy` points at it. One nobody waits on is the owner's to do whenever - never interrupt him for it. See §H.
+**Your flow-breaking `hitl`.** A `hitl` ticket matters _now_ only if something's `blockedBy` points at it. One nobody waits on is the owner's to do whenever - never interrupt him for it. See §H.
 
 ## I2. Register, claim, isolate
 
@@ -269,7 +282,7 @@ Anything longer - a log, a diff, a stack trace, a paragraph - goes as a comment 
 ## I7. Close out on GitHub - this is the job, not the epilogue
 
 1. Every ticket's PR is already open (I3). Never push to `master`, never force-push.
-2. Per ticket, **after** its PR is in: with a lead, that means the lead's merge confirmation for that PR - a ticket closed on an open PR is closed on code that may still bounce, and the audit will read it as done. Without a lead, after your own gates pass on the PR. Then comment what changed, the PR link, and **evidence per Done-when line**; `--remove-label in-progress`; close it *only* if Done-when actually passed. One that bounced or did not land stays open, `in-progress` removed, with a comment saying why.
+2. Per ticket, **after** its PR is in: with a lead, that means the lead's merge confirmation for that PR - a ticket closed on an open PR is closed on code that may still bounce, and the audit will read it as done. Without a lead, after your own gates pass on the PR. Then comment what changed, the PR link, and **evidence per Done-when line**; `--remove-label in-progress`; close it _only_ if Done-when actually passed. One that bounced or did not land stays open, `in-progress` removed, with a comment saying why.
 3. Comment on the chain issue: what landed, what did not, the PR, any serialized file you touched.
 4. Re-run your frontier - and send the §I4 announcements.
 5. **Audit before you say landed.** Run `~/.claude/skills/wave-chain/scripts/gh-audit.sh <chain#> <K>`. Every `FAIL` line names a ticket or PR whose GitHub state does not match a finished wave: fix it on GitHub and rerun until it prints `AUDIT PASS`. Only then send the `landed` line, and that line carries the words `audit: pass`. A `landed` line without them is a lie the lead will catch at L6, when it is expensive.
@@ -308,7 +321,7 @@ Then stop. The word is `confirm`, in chat. Anything else is a change request: ap
 
 ## L1. Branch, count, launch
 
-Three checks before anything, each a stop-and-report if it fails: there is exactly one open `orchestrator` issue with `wave:*` labels on tickets (otherwise the owner runs `--modify` first); `git status --porcelain` is empty in the repo root (the chain branch is cut from this checkout, and a dirty tree would carry the owner's uncommitted work onto it); `wezterm cli list` answers; and you are running in that repo yourself - Claude Code asks "do you trust this folder?" the first time it opens in a directory, and a wave tab launched into an untrusted folder sits on that prompt with nobody to answer it. You being here past that prompt is the proof.
+Three checks before anything, each a stop-and-report if it fails: your chain resolves (Several chains) to an open `orchestrator` issue whose tickets carry its `chain:<chain#>` and `wave:*` labels (otherwise the owner runs `--modify` first); no other chain's lead is live on this repo (`wezterm cli list` tab titles `wc<other#>-lead*`, or a `lead:` comment without a closing summary on another open chain issue); `git status --porcelain` is empty in the repo root (the chain branch is cut from this checkout, and a dirty tree would carry the owner's uncommitted work onto it); `wezterm cli list` answers; and you are running in that repo yourself - Claude Code asks "do you trust this folder?" the first time it opens in a directory, and a wave tab launched into an untrusted folder sits on that prompt with nobody to answer it. You being here past that prompt is the proof.
 
 Cut the chain branch, from the default branch, and push it:
 
@@ -384,13 +397,13 @@ Only after a blocking ticket's PR is merged does its §I4 announcement go out: c
 
 ## L4b. A wave that vanished
 
-A wave session gone from `ListAgents` without a `landed` line is dead, not done (a wave that has landed is one *you* closed, so its absence is expected). Relaunch it once, that wave only:
+A wave session gone from `ListAgents` without a `landed` line is dead, not done (a wave that has landed is one _you_ closed, so its absence is expected). Relaunch it once, that wave only:
 
 ```bash
 ~/.claude/skills/wave-chain/scripts/launch-waves.sh <chain#> <K> <K> <repo-dir>
 ```
 
-Comment the relaunch on the chain issue. The relaunched session recomputes its frontier from GitHub; tickets labelled `in-progress` and assigned to `@me` under `wave:K` are its own unfinished work, and it resumes them rather than skipping them as claimed. A wave that dies twice is reported to the owner as such, and its tickets stay open.
+Comment the relaunch on the chain issue. The relaunched session recomputes its frontier from GitHub; tickets labelled `in-progress` and assigned to `@me` under this chain's `wave:K` are its own unfinished work, and it resumes them rather than skipping them as claimed. A wave that dies twice is reported to the owner as such, and its tickets stay open.
 
 ## L5. Relay, both directions, one line each
 
@@ -451,13 +464,13 @@ A new issue, opened after the chain was built. `--modify` cannot take it: `--mod
 
 1. **Verify it first.** §R2 on this one ticket. A brand new issue can already be shipped, and grafting dead work into a live chain is worse than leaving it out.
 2. **Find its edges, both directions.** What open tickets it needs, and which open tickets now need it. Create them for real with the M5 call, `id` not number.
-3. **Place it.** Never earlier than the wave of its deepest open blocker. If nothing blocks it, it joins the lowest wave still running. Label `wave:K`.
+3. **Place it.** First the chain: the one its edges point into, or the one named with `--chain`; with several open and neither, ask. Then the wave: never earlier than the wave of its deepest open blocker. If nothing blocks it, it joins the lowest wave still running. Label `wave:K` and `chain:<chain#>`. An edge to a ticket in another chain is allowed and real, but that ticket's chain is not yours to schedule: say so in the comment.
 4. **Append to the chain issue.** A comment saying which ticket, which wave, which edges, and why it landed there.
 5. **Message that wave's orchestrator.** `SendMessage`, with the ticket number and its blockers. **This is the step that matters.** That session computed its frontier before your ticket existed and will never recompute on its own - a label alone is invisible to it. If that wave has already finished, say so and hand the ticket to the lowest wave still running instead. With a lead, copy the same message to the lead, so its final summary and its dead-wave check know the ticket exists.
 
 ## Project conventions
 
-These are this project's; replace them with your own repo's when adapting the skill. Ticket bodies carry `## Done when` (the acceptance contract), often `## Options` with an orchestrator recommendation, `## Evidence`, and `## Build slot`. Labels: `wayfinder:task` on work, `wayfinder:map` on the map, `wave:N`, `hitl`, `in-progress`, `orchestrator`, `needs-info`.
+These are this project's; replace them with your own repo's when adapting the skill. Ticket bodies carry `## Done when` (the acceptance contract), often `## Options` with an orchestrator recommendation, `## Evidence`, and `## Build slot`. Labels: `wayfinder:task` on work, `wayfinder:map` on the map, `wave:N`, `chain:<chain#>`, `hitl`, `in-progress`, `orchestrator`, `needs-info`.
 
 From `build-waves.md`, the rules that bite: serialized files (`proxy.ts`, `app/layout.tsx`, `vercel.json`, `AGENTS.md`, `DESIGN.md`, `app/sitemap.ts`, `lib/account/data.ts`) are handed **up** to the orchestrator, never edited by a worker; migration timestamps are assigned at dispatch, not discovered at merge; any ticket that moves money gets an Opus-level review pass; a dead worker is resumed with `SendMessage`, never re-dispatched; Persian is never invented - propose it on the issue and ship approved strings verbatim, no hamza; gates are `npm run typecheck && npm run lint && npm test && npm run build`.
 
@@ -503,3 +516,6 @@ From `build-waves.md`, the rules that bite: serialized files (`proxy.ts`, `app/l
 - "The audit fails on a ticket that isn't mine" → with a lead, every FAIL at L6 is the lead's. Fix it.
 - "The gates are green, I'll merge the chain PR" → never. The owner merges into main after his preview.
 - "I'll branch from main, the chain branch is just wave 1's stuff" → it is every wave's stuff, including your blocker's. Base on the chain branch.
+- "It's labelled `wave:2`, so it's my wave" → only with your `chain:<#>` label too. Another chain's wave 2 is not yours.
+- "Two chains are open, I'll take the first one" → name it (`--chain N`) or ask. Never guess a chain.
+- "The other chain has a lead, I'll start mine too" → one lead per repo. Plan and read freely; run one lead.

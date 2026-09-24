@@ -9,12 +9,19 @@ BRANCH="wave-chain/$CHAIN"
 fail=0; F(){ echo "FAIL  $*"; fail=1; }; OK(){ echo "ok    $*"; }
 
 since=$(gh issue view "$CHAIN" --json createdAt --jq .createdAt)
+# Chain membership (SKILL.md "Several chains"): tickets labelled chain:<CHAIN>; a legacy
+# chain (none of its tickets labelled) is the wave:* tickets that carry no chain:* label.
+if [ -n "$(gh issue list --state all --label "chain:$CHAIN" --limit 1 --json number --jq '.[0].number // empty' 2>/dev/null)" ]; then
+  member="any(.labels[].name; . == \"chain:$CHAIN\")"
+else
+  member="all(.labels[].name; startswith(\"chain:\") | not)"
+fi
 sel='.labels[].name | select(startswith("wave:"))'
 [ -n "$WAVE" ] && sel="(.labels[].name | select(. == \"wave:$WAVE\"))"
 
 gh issue list --state all --limit 300 \
-  --json number,state,labels,assignees,comments \
-  --jq ".[] | select(any($sel; true)) | select(all(.labels[].name; . != \"hitl\")) |
+  --json number,state,closedAt,labels,assignees,comments \
+  --jq ".[] | select(any($sel; true)) | select($member) | select(.state == \"OPEN\" or (.closedAt // \"\") > \"$since\") | select(all(.labels[].name; . != \"hitl\")) |
         {n:.number, s:.state, ip:(any(.labels[].name; . == \"in-progress\")),
          last:(.comments | sort_by(.createdAt) | last | {b:.body, t:.createdAt}),
          run:([.comments[] | select(.createdAt > \"$since\") | .body] | join(\"\\n\"))}" \
@@ -46,8 +53,8 @@ if [ -z "$WAVE" ]; then
   if [ "$(jq length <<<"$cp")" = 0 ]; then F "no chain PR from $BRANCH"; else
     [ "$(jq -r '.[0].isDraft' <<<"$cp")" = "false" ] && OK "chain PR ready for review" || F "chain PR #$(jq -r '.[0].number' <<<"$cp") is still a draft"
     cbody=$(jq -r '.[0].body' <<<"$cp")
-    gh issue list --state closed --limit 300 --json number,labels \
-      --jq '.[] | select(any(.labels[].name; startswith("wave:"))) | .number' | while read -r n; do
+    gh issue list --state closed --limit 300 --json number,labels,closedAt \
+      --jq ".[] | select(any(.labels[].name; startswith(\"wave:\"))) | select($member) | select((.closedAt // \"\") > \"$since\") | .number" | while read -r n; do
       grep -q "\[x\] #$n\b" <<<"$cbody" || F "chain PR body does not tick #$n"
     done | tee -a /tmp/gh-audit.$$ ; grep -q '^FAIL' /tmp/gh-audit.$$ && fail=1
   fi
