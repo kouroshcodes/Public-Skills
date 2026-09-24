@@ -59,11 +59,11 @@ spawn_tab() {
 
 if [ "$FROM" = lead ]; then
   name="wc$CHAIN-lead${GEN:+-$GEN}"
-  pane=$(spawn_tab "$name" "${LEAD_CLAUDE_FLAGS:-$ALLOW --model opus --autocompact 450k}" '/wave-chain --implement')
+  pane=$(spawn_tab "$name" "${LEAD_CLAUDE_FLAGS:-$ALLOW --model opus --autocompact 450k}" "/wave-chain --implement --chain $CHAIN")
   echo "lead $name -> wezterm pane $pane"; exit 0
 fi
 for k in $(seq "$FROM" "$TO"); do
   name="wc$CHAIN-wave$k"
-  pane=$(spawn_tab "$name" "${WAVE_CLAUDE_FLAGS:-$ALLOW --model sonnet --autocompact 600k}" "/wave-chain --implement $k")
+  pane=$(spawn_tab "$name" "${WAVE_CLAUDE_FLAGS:-$ALLOW --model sonnet --autocompact 600k}" "/wave-chain --implement $k --chain $CHAIN")
   echo "wave $k $name -> wezterm pane $pane"
 done

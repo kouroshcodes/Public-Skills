@@ -10,6 +10,8 @@ The lock is on the tickets themselves, as GitHub `blockedBy` edges you can query
 
 Hand-off line for a session run by hand: `GH Issue #<this issue>, Wave <K>`
 
+Chain label: `chain:<this issue>` - on this issue and on every ticket in it. Wave numbers are this chain's own; a `wave:K` ticket without this label belongs to another chain. <If other chains are open: "Also open: #<n> (<what>). Their waves are not ours; one lead per repo at a time.">
+
 | Wave | What it is | Tickets | Blocked at launch |
 |---|---|---|---|
 | 1 | <one line> | <n> | — |
@@ -17,7 +19,7 @@ Hand-off line for a session run by hand: `GH Issue #<this issue>, Wave <K>`
 
 ## Your frontier — compute it, do not assume it
 
-Runnable = open · unassigned · not `hitl` · no blocker whose state is open.
+Your tickets = `chain:<this issue>` · `wave:<K>`. Runnable = open · unassigned · not `hitl` · no blocker whose state is open.
 
 ```bash
 gh api repos/<owner>/<repo>/issues/<n>/dependencies/blocked_by \
