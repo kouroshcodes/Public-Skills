@@ -1,6 +1,6 @@
 ---
 name: grill-with-html
-description: A relentless interview to sharpen a plan or design, where wide rounds are rendered as an interactive HTML round sheet and the settled decisions land in CONTEXT.md and ADRs.
+description: A relentless interview to sharpen a plan or design, where wide rounds are rendered as an interactive HTML round sheet and the settled decisions land in CONTEXT.md and ADRs. Use when the user wants to be grilled on a plan or design and wants the rounds as a clickable HTML sheet instead of terminal text, asks for grill-with-html, or wants a design record (glossary, ADRs, decision tree) out of the interview. For a plain terminal grilling, use mattpocock-skills:grilling instead.
 disable-model-invocation: false
 ---
 

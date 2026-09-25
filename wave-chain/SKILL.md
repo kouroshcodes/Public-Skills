@@ -38,7 +38,7 @@ A repo can hold several chains at once - one for a feature track, one for a clea
 
 Every mode takes `--chain N` to name the chain it acts on (see Several chains). Without it the mode resolves the chain itself, and asks when more than one is open.
 
-## Two invariants, every mode
+## Invariants, every mode
 
 **`--read` writes nothing.** Not an issue, not a label, not a comment, not an edge, not a close. A stale ticket that obviously shipped is still only a _recommendation_ in `--read`. The default has to be safe to run by accident, or it stops being the default.
 
@@ -72,7 +72,7 @@ Any peer still live and you leave it up. This is the only deliberate kill, and i
 
 `devserver.sh` answers all three questions - is one up, start one, reap it - because `lsof` does not exist on Windows. A session there that shells out to `lsof` directly gets an empty answer, concludes port 3000 is free, and starts the second dev server this whole section exists to prevent. The script uses `lsof` where it exists and `netstat` where it does not, and prints the same PID either way. `WAVE_DEV_PORT` overrides the port.
 
-**CI minutes are a metered monthly budget, and a chain is the heaviest thing that ever spends them.** This is the one shared resource that does not recover when the machine goes quiet: RAM comes back, a dev server restarts, but a spent Actions minute is gone until the billing cycle resets. Paid for 2026-09-16 on chain #259 - the account hit **90% of its 2,000 included minutes with 15 days left in the cycle**, and the cause was almost entirely structural rather than careless: of 100 workflow runs in one day, **47 were on the chain branch itself**. A chain PR targets `main` and stays open for the whole run, so **every merge into the chain branch re-runs the entire suite for that same PR**, and with no concurrency group each of those runs completes even when the next merge lands seconds later. A 40-ticket chain therefore pays for ~40 full runs of the same PR to test intermediate states nobody will ever ship. Only the final state of a branch is worth testing.
+**CI minutes are a metered monthly budget, and a chain is the heaviest thing that ever spends them.** This is the one shared resource that does not recover when the machine goes quiet: RAM comes back, a dev server restarts, but a spent Actions minute is gone until the billing cycle resets. The cost is structural rather than careless: a chain PR targets `main` and stays open for the whole run, so **every merge into the chain branch re-runs the entire suite for that same PR**, and with no concurrency group each of those runs completes even when the next merge lands seconds later. A 40-ticket chain therefore pays for ~40 full runs of the same PR to test intermediate states nobody will ever ship. Only the final state of a branch is worth testing.
 
 So, before launching any wave (§L1), the lead checks the workflow for a concurrency group and adds one if it is missing:
 
@@ -134,7 +134,7 @@ Then cut the `OPEN` and `PARTIAL` tickets into waves. The cut is mechanical, and
 
 1. **Clean first.** A ticket without `## Done when` cannot be verified, so it cannot be scheduled: label it `needs-info` and leave it out. A ticket that is three tickets is split before it is placed.
 2. **Real edges only.** B depends on A when B's Done-when cannot be built or tested without A's code: a migration B reads, an endpoint B calls, a type B imports, a component B renders inside. "Same area", "nicer first", and "related" are not edges. Every proposed edge carries its reason. A fake edge adds a wave, and depth is the only thing that costs time.
-3. **Wave = longest path from a root.** No open blocker: wave 1. Otherwise: the wave after the deepest blocker. Never earlier, never later. Print the layers.
+3. **Wave = longest path from a root.** No open blocker: wave 1. Otherwise: the wave after the deepest blocker. Compute the layers in code - a short script over the edge list - not by hand, and print them.
 4. **Never balance by adding edges.** Uneven is fine. Waves run in parallel and only tickets wait, so a two-ticket wave 5 costs almost nothing.
 5. **Split a wide layer by area, not by edge.** A layer over ~20 tickets becomes several waves with no edges between them, grouping tickets that touch the same files. Two sessions run it instead of one queueing, and tickets that would conflict at merge sit in the same wave where one orchestrator serializes them. Under ~5 tickets and the edges allow it: fold into the neighbour.
 6. **Foundations first inside a wave.** Order by how many tickets depend on each one; the migration five tickets wait on gets the first `## Build slot`, not the fifth.
@@ -223,7 +223,7 @@ Say which tickets are blocked at launch and which are `hitl`. Do not implement a
 
 Read the chain issue, then compute - do not assume - three lists.
 
-**Your frontier.** Your tickets are `chain:<chain#>` · `wave:K` (a legacy chain: `wave:K` with no `chain:*` label). Runnable = open · unassigned · not `hitl` · no blocker whose state is open. Plus, if you were relaunched (§L4b - the lead's relaunch comment on the chain issue names your wave): open · assigned to `@me` · `in-progress` · your chain · `wave:K` - that is your own unfinished work, resume it. Use the R3 query; an empty array means go. A `wave:K` ticket from another chain is never yours, however free it looks.
+**Your frontier.** Your tickets are `chain:<chain#>` · `wave:K` (a legacy chain: `wave:K` with no `chain:*` label). Runnable = open · unassigned · not `hitl` · no blocker whose state is open. Plus, if you were relaunched (§L4b - the lead's relaunch comment on the chain issue names your wave): open · assigned to `@me` · `in-progress` · your chain · `wave:K` - that is your own unfinished work, resume it. Run `~/.claude/skills/wave-chain/scripts/frontier.sh <chain#> <K>`: it prints each ticket as `runnable`, or `blocked` with its open blockers, plus the tickets that wait on it. A `wave:K` ticket from another chain is never yours, however free it looks.
 
 Two traps: `gh issue list --json blockedBy` returns an **object** - the edges are under `.nodes`, and `--jq` straight at the field is unreliable (`build-waves.md`) - and the list **includes already-closed blockers**, so filter on state every time. REST says `open`/`closed` lowercase; the JSON field says `OPEN`/`CLOSED`.
 
@@ -241,10 +241,10 @@ Then claim **your frontier tickets only** - the ones I1 computed as runnable: `g
 
 ## I3. Run the free tickets
 
-**REQUIRED SUB-SKILL:** `superpowers:subagent-driven-development` - one subagent per ticket, **five in flight at most** (Shared machine). More free tickets than slots: queue them and dispatch as agents return. Give each the ticket body verbatim; assume it has seen nothing of this conversation.
+Run the tickets with `superpowers:subagent-driven-development` - one subagent per ticket, **five in flight at most** (Shared machine). More free tickets than slots: queue them and dispatch as agents return. Give each the ticket body verbatim; assume it has seen nothing of this conversation.
 
 **Worker model, per ticket:** `sonnet` by default. `opus` for any ticket that moves money, touches a serialized file, or carries a `## Options` section the orchestrator had to decide - those are the ones where a cheaper worker's mistake costs more than the model. Never `haiku` for a worker.
-**REQUIRED SUB-SKILL:** `superpowers:verification-before-completion` before any completion claim.
+Use `superpowers:verification-before-completion` before any completion claim.
 
 **One PR per ticket, the moment that ticket's worker finishes** - not one wave PR at close-out. The worker commits on its branch, pushes, and opens the PR titled `wave K: #<n> <what>` (the audit finds your PRs by the `wave K:` prefix); with a lead the base is `wave-chain/<chain#>`, else `main`. Then you send the lead a `ready` line (§I6) and move on to the next queued ticket. A blocker that ships in the first hour is released in the first hour; batching it into a wave PR at the end holds every waiter for the whole wave.
 
@@ -266,7 +266,7 @@ Comment the item on the chain issue, then let §H carry it.
 
 ## I6. Report parked, do not go quiet
 
-A ticket you park gets a one-line comment saying so and on what - `parked: waits on #24 (wave 1)` or `parked: needs Kourosh, #140` - the moment you park it; the audit fails an open ticket nobody has explained. When only blocked tickets remain, report - which tickets, which wave, and **which kind of wait**: agent-gated ("Wave 1 is finishing #24, landing soon") or human-gated ("needs Kourosh, no ETA"). On a human-gated wait, stop holding and report. A silent session is indistinguishable from a dead one. With a lead, a human-gated wait also means you are finished: the owner is away and answers when he is back, so send the `parked-human` line, leave the ticket open and unassigned, do your I7 close-out for everything that did land, and stop. The lead lists it in the final summary as waiting on him; nobody idles in a tab for hours over it. **"Stop" means report and fall silent - you cannot exit.** An interactive session has no way to terminate itself: there is no self-exit tool, and the tab closes only when the `claude` process ends, which needs `/exit`, Ctrl-D, or an external kill - all of them outside your reach. So never tell the lead you are "exiting now"; say you are done and idle. Your tab is the lead's to reap (§L6), and a wave that reports an exit it cannot perform is how a lead comes to believe a session is gone while it sits holding memory for hours.
+A ticket you park gets a one-line comment saying so and on what - `parked: waits on #24 (wave 1)` or `parked: needs owner, #140` - the moment you park it; the audit fails an open ticket nobody has explained. When only blocked tickets remain, report - which tickets, which wave, and **which kind of wait**: agent-gated ("Wave 1 is finishing #24, landing soon") or human-gated ("needs owner, no ETA"). On a human-gated wait, stop holding and report. A silent session is indistinguishable from a dead one. With a lead, a human-gated wait also means you are finished: the owner is away and answers when he is back, so send the `parked-human` line, leave the ticket open and unassigned, do your I7 close-out for everything that did land, and stop. The lead lists it in the final summary as waiting on him; nobody idles in a tab for hours over it. **"Stop" means report and fall silent - you cannot exit.** An interactive session has no way to terminate itself: there is no self-exit tool, and the tab closes only when the `claude` process ends, which needs `/exit`, Ctrl-D, or an external kill - all of them outside your reach. So never tell the lead you are "exiting now"; say you are done and idle. Your tab is the lead's to reap (§L6), and a wave that reports an exit it cannot perform is how a lead comes to believe a session is gone while it sits holding memory for hours.
 
 **Where the report goes depends on one observable fact.** If the chain issue carries a `lead:` registration comment (§L2), you were launched by a lead: `SendMessage` the report to the session named in the **latest** such comment - re-read it before every message, leads hand over (§L7) - and write nothing for the owner - he is not reading your tab. If there is no `lead:` comment, you were opened by hand and the owner is your reader: tell him in chat. The same routing applies to every I7 close-out summary and every §I5 `hitl` item.
 
@@ -286,7 +286,7 @@ Anything longer - a log, a diff, a stack trace, a paragraph - goes as a comment 
 3. Comment on the chain issue: what landed, what did not, the PR, any serialized file you touched.
 4. Re-run your frontier - and send the §I4 announcements.
 5. **Audit before you say landed.** Run `~/.claude/skills/wave-chain/scripts/gh-audit.sh <chain#> <K>`. Every `FAIL` line names a ticket or PR whose GitHub state does not match a finished wave: fix it on GitHub and rerun until it prints `AUDIT PASS`. Only then send the `landed` line, and that line carries the words `audit: pass`. A `landed` line without them is a lie the lead will catch at L6, when it is expensive.
-6. **Your report and the PR body must say the same thing.** Before you report a ticket `ready`, re-read its PR body and confirm every gate row matches what you are about to send. Paid for on 2026-09-16 (chain #259): a wave reported `BUILD_EXIT=0` to the lead while that same PR's body still said the build was "NOT PROVEN YET", and the second PR from the same wave had the identical drift - so it is systematic, not a slip. It happens because the body is written when the PR opens and the gates are re-run later. The damage is not the stale row: the owner opens GitHub, not the chat, so if the two disagree then either the body is misleading him or the report is misleading the lead, and **from the outside there is no way to tell which**. A lead that catches it has to re-run the gates itself to find out, which is the whole cost the report was supposed to save.
+6. **Your report and the PR body must say the same thing.** Before you report a ticket `ready`, re-read its PR body and confirm every gate row matches what you are about to send. The two drift systematically, not by accident, because the body is written when the PR opens and the gates are re-run later. The damage is not the stale row: the owner opens GitHub, not the chat, so if the two disagree then either the body is misleading him or the report is misleading the lead, and **from the outside there is no way to tell which**. A lead that catches it has to re-run the gates itself to find out, which is the whole cost the report was supposed to save.
 
 ---
 
@@ -321,7 +321,7 @@ Then stop. The word is `confirm`, in chat. Anything else is a change request: ap
 
 ## L1. Branch, count, launch
 
-Three checks before anything, each a stop-and-report if it fails: your chain resolves (Several chains) to an open `orchestrator` issue whose tickets carry its `chain:<chain#>` and `wave:*` labels (otherwise the owner runs `--modify` first); no other chain's lead is live on this repo (`wezterm cli list` tab titles `wc<other#>-lead*`, or a `lead:` comment without a closing summary on another open chain issue); `git status --porcelain` is empty in the repo root (the chain branch is cut from this checkout, and a dirty tree would carry the owner's uncommitted work onto it); `wezterm cli list` answers; and you are running in that repo yourself - Claude Code asks "do you trust this folder?" the first time it opens in a directory, and a wave tab launched into an untrusted folder sits on that prompt with nobody to answer it. You being here past that prompt is the proof.
+These checks come before anything, each a stop-and-report if it fails: your chain resolves (Several chains) to an open `orchestrator` issue whose tickets carry its `chain:<chain#>` and `wave:*` labels (otherwise the owner runs `--modify` first); no other chain's lead is live on this repo (`wezterm cli list` tab titles `wc<other#>-lead*`, or a `lead:` comment without a closing summary on another open chain issue); `git status --porcelain` is empty in the repo root (the chain branch is cut from this checkout, and a dirty tree would carry the owner's uncommitted work onto it); `wezterm cli list` answers; and you are running in that repo yourself - Claude Code asks "do you trust this folder?" the first time it opens in a directory, and a wave tab launched into an untrusted folder sits on that prompt with nobody to answer it. You being here past that prompt is the proof.
 
 Cut the chain branch, from the default branch, and push it:
 
@@ -347,7 +347,7 @@ Then open the one PR the owner will ever read, as a draft, `wave-chain/<chain#>`
 - [ ] #15 <title>
 ## Wave 2
 ...
-## Waiting on Kourosh
+## Waiting on the owner
 (filled at the end)
 ```
 
@@ -418,7 +418,7 @@ A finished wave does not exit on its own - an interactive session sits at its pr
 1. Dispatch one final merge agent to run the full gates on the chain branch and report in the L4 shape.
 2. **Audit the whole chain**: `~/.claude/skills/wave-chain/scripts/gh-audit.sh <chain#>`. Fix every `FAIL` on GitHub yourself - a ticket a dead wave left `in-progress`, a closed ticket without its evidence comment, a wave PR still open, an unticked checklist line - and rerun until `AUDIT PASS`. You do not finish on a `FAIL`, and you do not hand a `FAIL` to the owner as a to-do.
 3. **Review the whole chain PR once**, where the waves' changes meet: dispatch one `opus` review subagent with the chain PR number and this brief - review the full diff of the PR for correctness bugs and for changes from different waves that contradict each other, post each real finding as an inline PR comment with the file and line, ignore style, and return only `review: <n> findings, <m> blocking`. Every blocking finding goes through a merge agent as a fix on the chain branch, then gates and smoke again, then the audit in step 2 reruns. You do not mark the PR ready with a blocking finding open; the owner opens a PR that has already been reviewed once, with the review visible on it.
-4. Fill the `## Waiting on Kourosh` section of the chain PR body with every `parked-human` ticket and its one-line reason.
+4. Fill the `## Waiting on the owner` section of the chain PR body with every `parked-human` ticket and its one-line reason.
 5. **If that section is not empty, build the §H decisions sheet now**, as part of this close-out, with every open `hitl` item on it - the owner answers it in one sitting and re-runs `--implement`; the next lead finds the answers in the inbox file.
 
 6. **Reap the wave tabs.** A wave cannot close itself - there is no self-exit tool, so a wave that said "exiting" only went idle - and every tab left open holds a whole Claude session in memory, several hundred MB each, on the same machine whose memory pressure is what the caps at the top of this file exist to manage. Once a wave has sent `landed` and its audit is clean, close its tab yourself:
@@ -452,8 +452,8 @@ One session owns the decision sheet. When the chain has a lead (§L), the lead o
 Without a lead, ownership does not transfer by itself. Before you finish your wave, hand the sheet over: `SendMessage` the next lowest wave still running, and say on the chain issue who owns it now. An orchestrator that exits quietly leaves the sheet ownerless and every pending question unasked.
 
 1. Collect every pending `hitl` item from the chain issue, plus your own. Mark the ones something is `blocked_by`; those are the only urgent ones.
-2. Build one dark HTML sheet at `~/Desktop/kouroshtrades-decisions.html`: every pending question, picks, free text, file drops, "Copy as markdown". Critical-path items first.
-3. Read answers back from `inbox/kouroshtrades-decisions.md`. Do not chase him in chat; he answers the sheet in one sitting.
+2. Build one dark HTML sheet at `~/Desktop/<repo>-decisions.html`: every pending question, picks, free text, file drops, "Copy as markdown". Critical-path items first.
+3. Read answers back from `inbox/<repo>-decisions.md`. Do not chase him in chat; he answers the sheet in one sitting.
 4. Apply each answer: comment it on its ticket, and where an answer clears a blocker, close that blocker and send the §I4 announcement to whoever was waiting.
 
 ---
@@ -485,11 +485,11 @@ From `build-waves.md`, the rules that bite: serialized files (`proxy.ts`, `app/l
 - "The brief is long, I'll describe the waves not the tickets" → one line per ticket. He is deciding what runs.
 - "I'll write the labels, he'll say if the cut is wrong" → the cut is confirmed before the first write, not after the fiftieth.
 - "I'll tell him about the hitl ticket when I reach it" → too late. Claim time.
-- "I'll write my own decisions sheet" → one sheet, one owner, lowest live wave.
+- "I'll write my own decisions sheet" → one sheet, one owner: the lead, or without one the lowest live wave.
 - "I labelled the new ticket, they'll pick it up" → they will not. The frontier was already computed. Message them.
 - "Twelve free tickets, twelve agents" → five in flight, per wave. Queue the rest.
 - "Port 3000 is busy, I'll take 3001" → that is a second dev server. The one that answered is the shared one; use it.
-- "I'm done, I'll kill the dev server" → you did not start it, or someone else is still on it. Leave it up.
+- "I'm done, I'll kill the dev server" → only without a lead, and only as the last session out (Shared machine). Otherwise leave it up.
 - "Port 3000 is empty, I'll start the server" (in a wave, with a lead) → you never start one. Message the lead; it started one and it is down.
 - "I'll pick up a ticket from another wave" → you own one wave. Announce and hand over.
 - "I'll close the tickets after the PR merges" (no lead) → close them now. Nobody else will.

@@ -132,8 +132,8 @@
     <h3>2. Claim before you dispatch</h3>
     <p>For each available task, edit this file: <code>data-state="todo"</code> becomes <code>data-state="doing"</code> on that task's article. Match on the literal string <code>data-id="T3" data-state="todo"</code> so the edit hits exactly one task. If the task has a <code>data-issue</code>, mirror the claim with <code>gh issue comment &lt;n&gt; --body "Claimed by worklist runner."</code>. Claim every task in the round <em>before</em> spawning anything, so nothing is picked up twice.</p>
 
-    <h3>3. Fan out - AT MOST 3 AGENTS, ONE BROWSER</h3>
-    <p><strong>This is an 8GB Mac and it HARD-CRASHED on 2026-08-08 doing this step wrong.</strong> Six agents were spawned in one message against one shared dev server. The dev server was never the problem - it was ~3.2GB. Each agent also spawned <em>its own</em> headless Chrome (~0.5-0.8GB) and <em>its own</em> <code>tsc</code> (~1.5GB each, three concurrent at peak). The box went to 13.9GB swap and died. Do NOT spawn one agent per task.</p>
+    <h3>3. Fan out - at most 3 agents, one browser</h3>
+    <p><strong>Assume a memory-constrained machine (the author's is an 8GB Mac).</strong> The dev server is not the cost - it is ~3.2GB once. What exhausts memory is per-agent duplication: each agent that drives a browser adds its own headless Chrome (~0.5-0.8GB), and each that type-checks adds its own <code>tsc</code> (~1.5GB). One agent per task multiplies both, so rounds are capped instead.</p>
     <ul>
       <li><strong>Cap the round at 3 agents, and only ONE may drive a browser.</strong> The other two must be text-only - docs, a test, a grep audit, a code edit with no visual check. The browser count is the real constraint, not the agent count; two headless Chromes in one round is what kills the box.</li>
       <li><strong>You start ONE dev server</strong> before dispatching, and say so in every prompt: never <code>npm run dev</code>, never start a second, never kill it.</li>

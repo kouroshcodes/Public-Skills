@@ -114,13 +114,15 @@ A wave may not say `landed` until the audit passes for its wave. The lead may no
 
 | Role | Model | Why |
 |---|---|---|
-| `--read` / `--modify` planning | Opus 5 | One-shot judgement over the whole backlog. A wrong cut costs a run. |
-| Lead | Opus 5 | Spends almost nothing after the redesign. Its judgement calls reach you directly. |
-| Merge agent | Opus 5 | Cross-wave conflict resolution is where a bad edit silently breaks everyone. |
-| Wave orchestrators | Sonnet 5 | Structured work, the largest context growth, 2.5× cheaper than Opus. |
-| Ticket workers | Sonnet 5 | Most of the tokens in a run. |
-| Money-moving or serialized-file tickets | Opus 5 | Where a cheaper worker's mistake costs more than the model. |
-| Read-phase verifiers | Haiku 4.5 | Grep and cite `file:line`. No reasoning depth needed. |
+| `--read` / `--modify` planning | `opus` | One-shot judgement over the whole backlog. A wrong cut costs a run. |
+| Lead | `opus` | Spends almost nothing after the redesign. Its judgement calls reach you directly. |
+| Merge agent | `opus` | Cross-wave conflict resolution is where a bad edit silently breaks everyone. |
+| Wave orchestrators | `sonnet` | Structured work, the largest context growth, much cheaper than Opus. |
+| Ticket workers | `sonnet` | Most of the tokens in a run. |
+| Money-moving or serialized-file tickets | `opus` | Where a cheaper worker's mistake costs more than the model. |
+| Read-phase verifiers | `haiku` | Grep and cite `file:line`. No reasoning depth needed. |
+
+These are Claude Code model aliases; each resolves to the current model in its tier.
 
 All of this is baked in. The launcher starts wave tabs on Sonnet in `auto` permission mode with the tools they need pre-allowed, so nothing stalls on a prompt in a tab nobody is watching. Tested: auto mode on Sonnet writes without asking; on Haiku it falls back to manual mode and asks, so a session is never Haiku; `bypassPermissions` shows a warning screen and stalls. Override with `WAVE_CLAUDE_FLAGS` if you ever need to.
 
@@ -190,6 +192,7 @@ gh api -X POST repos/OWNER/REPO/issues/51/dependencies/blocked_by -F issue_id=$B
 | `scripts/start-lead.sh` | Starts the lead in the current tab, named and capped. Alias it to `wave-chain`. |
 | `scripts/launch-waves.sh` | Opens one WezTerm tab per wave, or a successor lead, each its own Claude session with the right model and context window. Hosts the tab in `zsh`, or PowerShell on Windows. |
 | `scripts/gh-audit.sh` | Verifies GitHub reflects the run. Exit 1 on any `FAIL`. |
+| `scripts/frontier.sh` | Prints one wave's runnable and blocked tickets, and who waits on each, from GitHub's `blockedBy` edges. |
 | `references/chain-issue.md` | Template for the chain issue. |
 
 ## Adapting it
