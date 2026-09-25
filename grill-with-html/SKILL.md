@@ -25,7 +25,12 @@ Never render the *final* confirmation ("have we reached shared understanding?") 
 
 One file, **regenerated at the same path every round** — the user keeps a single browser tab and refreshes. Write it to the scratchpad directory, or a gitignored path in the project. State the path once, in round 1; after that just say "refreshed — round N is up."
 
-Build it at html-it **Level 3**. Three sections, in this order:
+Build it at html-it **Level 3**, with two exceptions to html-it's defaults:
+
+- **A local file, not an Artifact.** The single refreshed tab is the point; publishing every round would scatter links.
+- **Utilitarian, not editorial.** The sheet is a working tool read once per round. Screenshot it in round 1 only; the layout doesn't change after that. The editorial treatment is for the rollup page at the end.
+
+Three sections, in this order:
 
 **1. Settled** — every decision already answered, as static text. Question, the answer landed on, and one line of why. Not interactive: settled is settled. This is the memory that terminal scrollback loses by round four.
 
